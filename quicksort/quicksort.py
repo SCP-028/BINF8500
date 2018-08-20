@@ -16,9 +16,9 @@ def QuickSort(lol, start, stop):
     """
     if start < stop:
         i = start  # i is going to be the correct position for pivot
-        pivot = lol[stop][0]
+        pivot = lol[stop][1]
         for j in range(start, stop):
-            if lol[j][0] <= pivot:
+            if lol[j][1] <= pivot:
                 lol[i], lol[j] = lol[j], lol[i]
                 i += 1
         lol[i], lol[stop] = lol[stop], lol[i]  # put pivot at the right position
