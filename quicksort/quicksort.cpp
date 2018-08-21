@@ -1,5 +1,6 @@
+#include <cstdio>   // printf
+#include <cstdlib>  // exit
 #include <fstream>  // std::ifstream, ofstream
-#include <iostream> // std::cout
 #include <iterator> // std::ostream_iterator
 #include <string>   // std::string
 #include <vector>   // std::vector, swap
@@ -89,10 +90,10 @@ int main(int argc, char **argv)
 {
   if (argc == 1 || argc > 3)
   {
-    cerr << "[ERR] Requires input FASTQ file.\n\n";
-    cout << "Implements the QuickSort algorithm on the sequences inside a FASTQ file.\n\n"
-            "Usage\n-----\n"
-            "quicksort <input-fastq> [output-filename]\n";
+    printf("[ERR] Requires input FASTQ file and an optional output filename.\n\n"
+           "Implements the QuickSort algorithm on the sequences inside a FASTQ file.\n\n"
+           "Usage\n-----\n"
+           "quicksort <input-fastq> [output-filename]\n");
     exit(1);
   }
   // Read file into vector
@@ -109,7 +110,7 @@ int main(int argc, char **argv)
   }
   else
   {
-    cerr << "Cannot open file: " << argv[1] << endl;
+    printf("Cannot open file: %s\n", argv[1]);
   }
 
   // Sort the vector `fastq`
@@ -121,7 +122,7 @@ int main(int argc, char **argv)
 
     for (size_t i = 0; i < fastq.size(); i++)
     {
-      cout << fastq[i] << endl;
+      printf("%s\n", fastq[i].c_str());
     }
   }
   if (argc == 3)
@@ -136,7 +137,7 @@ int main(int argc, char **argv)
     }
     else
     {
-      cerr << "Cannot write to file: " << argv[2] << endl;
+      printf("Cannot write to file: %s\n", argv[2]);
     }
   }
   return 0;
