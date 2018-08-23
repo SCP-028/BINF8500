@@ -111,6 +111,7 @@ int main(int argc, char **argv)
   else
   {
     printf("Cannot open file: %s\n", argv[1]);
+    exit(1);
   }
 
   // Sort the vector `fastq`
@@ -138,6 +139,7 @@ int main(int argc, char **argv)
     else
     {
       printf("Cannot write to file: %s\n", argv[2]);
+      exit(1);
     }
   }
   return 0;
