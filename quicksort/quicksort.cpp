@@ -7,54 +7,54 @@
 using namespace std;
 const size_t COLS = 4;
 
-void swap_rows(vector<string> *v, size_t arow, size_t brow)
+void swap_rows(vector<string> &v, size_t arow, size_t brow)
 {
   /* Swap two rows in the vector. arow and brow are row numbers. */
   if (arow != brow)
   {
     for (unsigned i = 0; i < COLS; i++)
     {
-      (*v)[arow * COLS + i].swap((*v)[brow * COLS + i]);
+      swap(v[arow * COLS + i], v[brow * COLS + i]);
     }
   }
 }
 
-void median_of_three(vector<string> *v, size_t start, size_t mid, size_t stop)
+void median_of_three(vector<string> &v, size_t start, size_t mid, size_t stop)
 {
   /* Sort the first, middle and last elements in the vector, such that
   the smallest element is at the beginning, and the median is at the end. */
-  if ((*v)[start * COLS + 1] > (*v)[mid * COLS + 1])
+  if (v[start * COLS + 1] > v[mid * COLS + 1])
   {
     swap_rows(v, start, mid);
   }
-  if ((*v)[start * COLS + 1] > (*v)[stop * COLS + 1])
+  if (v[start * COLS + 1] > v[stop * COLS + 1])
   {
     swap_rows(v, start, stop);
   }
-  if ((*v)[stop * COLS + 1] > (*v)[mid * COLS + 1])
+  if (v[stop * COLS + 1] > v[mid * COLS + 1])
   {
     swap_rows(v, mid, stop);
   }
 }
 
-size_t partition(vector<string> *v, size_t start, size_t stop)
+size_t partition(vector<string> &v, size_t start, size_t stop)
 {
   /* Perform the Hoare partition scheme. */
   size_t mid = (stop + start) / 2;
   median_of_three(v, start, mid, stop);
-  string pvt = (*v)[stop * COLS + 1];
+  string pvt = v[stop * COLS + 1];
   size_t i = start - 1, j = stop + 1;
   while (true)
   {
     do
     {
       i++;
-    } while ((*v)[i * COLS + 1] < pvt);
+    } while (v[i * COLS + 1] < pvt);
 
     do
     {
       j--;
-    } while ((*v)[j * COLS + 1] > pvt);
+    } while (v[j * COLS + 1] > pvt);
 
     if (i < j)
     {
@@ -67,7 +67,7 @@ size_t partition(vector<string> *v, size_t start, size_t stop)
   }
 }
 
-void quicksort(vector<string> *v, size_t start, size_t stop)
+void quicksort(vector<string> &v, size_t start, size_t stop)
 {
   if (stop > start)
   {
@@ -98,6 +98,7 @@ int main(int argc, char **argv)
   }
   // Read file into vector
   vector<string> fastq;
+  fastq.reserve(4000000);
   ifstream fin(argv[1]);
   if (fin.is_open())
   {
@@ -106,6 +107,7 @@ int main(int argc, char **argv)
     {
       fastq.push_back(line);
     }
+    fastq.shrink_to_fit();
     fin.close();
   }
   else
@@ -116,7 +118,7 @@ int main(int argc, char **argv)
 
   // Sort the vector `fastq`
   const size_t ROWS = fastq.size() / COLS;
-  quicksort(&fastq, 0, ROWS - 1);
+  quicksort(fastq, 0, ROWS - 1);
 
   if (argc == 2)
   {
