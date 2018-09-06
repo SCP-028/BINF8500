@@ -8,36 +8,50 @@
 
 class Sample
 {
-public:
+private:
   std::string sample_name;     // name of the sample
   std::vector<float> features; // rest of the row in the input
-  int cluster_id;              // the cluster that the sample belongs to
+  size_t cluster_id = 0;       // the cluster that the sample belongs to
   float distance_to_centroid;  // should be updated with cluster_id
 
+public:
   Sample(const std::vector<std::string> &);
+  void set_cluster_id(size_t);
+  void set_distance_to_centroid(std::vector<float> &, bool initialize);
+  std::string get_sample_name();
+  std::vector<float> get_features();
+  size_t get_cluster_id();
+  float get_distance_to_centroid();
 };
 
 class Cluster
 {
-public:
-  int cluster_id;                   // assigned to the samples
-  std::vector<float> centroid;      // same length as Sample::features
-  std::vector<string> sample_names; // samples within this cluster
+private:
+  size_t cluster_id;           // assigned to the samples. 0 is reserved for not belonging to any cluster.
+  std::vector<float> centroid; // same length as Sample::features
+  std::vector<Sample> samples; // samples within this cluster
 
+public:
   Cluster(int cluster_id, Sample &);
-  void addSample(Sample);
-  void removeSample(Sample);
-  void updateCentroid();
+  size_t get_cluster_id();
+  std::vector<float> get_centroid();
+  void add_sample(Sample &);
+  void remove_sample(Sample &);
+  void update_centroid();
 };
 
-inline std::vector<std::string>
-split(const std::string &string_to_split,
-      std::vector<std::string> &output_vector,
-      const char delimiter);
+// helper functions
+namespace kmeans
+{
+std::vector<std::string> split(const std::string &string_to_split,
+                               std::vector<std::string> &output_vector,
+                               const char delimiter);
 
-inline std::vector<std::vector<std::string>>
-read_table(std::vector<std::vector<std::string>> &matrix,
-           const std::string input_file);
+std::vector<std::vector<std::string>> read_table(std::vector<std::vector<std::string>> &matrix,
+                                                 const std::string input_file);
 
-inline void
-scale_features(std::vector<Sample> &matrix, const size_t ncol);
+float col_mean(std::vector<Sample> &, size_t column_num);
+
+void scale_features(std::vector<Sample> &matrix);
+float distance(std::vector<float> &v1, std::vector<float> &v2);
+} // namespace kmeans
