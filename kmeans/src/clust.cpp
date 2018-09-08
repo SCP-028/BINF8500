@@ -4,8 +4,9 @@ using std::vector, std::string;
 /***************
  * class Sample *
  ****************/
-Sample::Sample(const vector<string> &v)
+Sample::Sample(const vector<string> &v, size_t sample_id)
 {
+    this->sample_id = sample_id;
     // first item should be the name, all the others should be converted to floats
     this->sample_name = v[0];
     for (size_t i = 1; i < v.size(); i++)
@@ -33,9 +34,9 @@ void Sample::set_distance_to_centroid(vector<float> &centroid, bool initialize =
     }
 }
 
-std::string Sample::get_sample_name()
+size_t Sample::get_sample_id()
 {
-    return this->sample_name;
+    return this->sample_id;
 }
 
 std::vector<float> Sample::get_features()
@@ -81,12 +82,16 @@ void Cluster::remove_sample(Sample &s)
 {
     for (size_t i = 0; i <= samples.size(); i++)
     {
-        if (samples[i].get_sample_name() == s.get_sample_name())
+        if (samples[i].get_sample_id() == s.get_sample_id())
         {
             samples.erase(samples.begin() + i);
             s.set_cluster_id(0);
         }
     }
+}
+std::vector<Sample> Cluster::get_samples()
+{
+    return this->samples;
 }
 void Cluster::update_centroid()
 {
@@ -186,5 +191,37 @@ float distance(vector<float> &v1, vector<float> &v2)
     }
     ans = std::sqrt(ans);
     return ans;
+}
+void print_matrix_row(vector<vector<string>> &matrix, size_t n)
+{
+    const size_t NCOL = matrix[0].size() - 1;
+    for (size_t i = 0; i < NCOL; i++)
+    {
+        printf("%s\t", matrix[n][i].c_str());
+    }
+    printf("%s\n", matrix[n][NCOL].c_str());
+}
+
+void print_cluster_result(vector<Cluster> &res, vector<vector<string>> &matrix)
+{
+    for (auto c : res)
+    {
+        printf("\n\nCluster %d\n---------\n\n", c.get_cluster_id());
+        print_matrix_row(matrix, 0);
+        vector<Sample> _samples = c.get_samples();
+        for (auto s : _samples)
+        {
+            size_t _sample_id = s.get_sample_id();
+            print_matrix_row(matrix, _sample_id);
+        }
+    }
+}
+
+void reset_samples(vector<Sample> &samples)
+{
+    for (auto s : samples)
+    {
+        s.set_cluster_id(0);
+    }
 }
 } // namespace kmeans

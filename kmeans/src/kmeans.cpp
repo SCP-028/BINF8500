@@ -1,6 +1,8 @@
-#include <cstdio> // printf
+#include <cstdio> // std::printf
+#include <limits> // std::numeric_limits<float>::max()
 #include "clust.h"
 using namespace std;
+const static size_t MAX_ITER = 1000;
 
 int main(int argc, char **argv)
 {
@@ -25,14 +27,14 @@ int main(int argc, char **argv)
     vector<Sample> samples;
     for (size_t i = 1; i < NROW; i++) // skip header row
     {
-        Sample g(matrix[i]);
+        Sample g(matrix[i], i);
         samples.push_back(g);
     }
 
     // Normalize data before clustering -> mean=0 and standard deviation=1 on each column
     kmeans::scale_features(samples);
 
-    // Keep increasing k until the Bayesian information criterion is reached
+    // Keep increasing k until the Bayesian Information Criterion is reached
     for (size_t k = 2; k < NROW; k++)
     {
         // Pick 1st centroid randomly
@@ -41,39 +43,66 @@ int main(int argc, char **argv)
         vector<Cluster> clusters;
         Cluster c(1, samples[centroid_one]);
         clusters.push_back(c);
-        // pick the point that's furthest & repeat
+        // find the point that's the furthest from the last centroid and
+        // assign it as the next centroid
         for (size_t cluster_id = 2; cluster_id <= k; cluster_id++)
         {
-            // start with the only sample in the last cluster
-            Sample furthest_sample = clusters[cluster_id - 1][0];
-            for (auto item : samples)
+            vector<float> last_centroid = clusters.back().get_centroid();
+            float max_distance = 0.0;
+            size_t new_centroid_sample_id;
+            for (auto sample : samples)
             {
-                if (item.get_cluster_id() == 0) // doesn't have a cluster yet
+                if (sample.get_cluster_id() == 0) // doesn't have a cluster yet
                 {
-                    float tmp_distance = kmeans::distance(item, clusters[0].get_centroid());
-                    if (tmp_distance > furthest_sample.get_distance_to_centroid())
+                    vector<float> _features = sample.get_features();
+                    float _distance = kmeans::distance(_features, last_centroid);
+                    if (_distance > max_distance)
                     {
-                        furthest_sample = item;
+                        max_distance = _distance;
+                        new_centroid_sample_id = sample.get_sample_id();
                     }
                 }
             }
-            Cluster c(cluster_id, furthest_sample);
+            // create new cluster with this sample as the centroid
+            Cluster c(cluster_id, samples[new_centroid_sample_id - 1]);
             clusters.push_back(c);
         }
-        // Assign each point to the closest centroid
 
-        // Update the location of the centroid by averaging all the points within the cluster
+        size_t iter_num = 0, num_of_changes;
+        while (iter_num < MAX_ITER && num_of_changes != 0)
+        {
+            num_of_changes = 0;
+            // Assign each point to the closest centroid
+            for (auto sample : samples)
+            {
+                float min_distance = numeric_limits<float>::max();
+                size_t current_cluster_id = sample.get_cluster_id(),
+                       cluster_id_to_assign = 0;
+                for (auto cluster : clusters)
+                {
+                    vector<float> _centroid = cluster.get_centroid(),
+                                  _features = sample.get_features();
+                    float _distance = kmeans::distance(_features, _centroid);
+                    if (_distance < min_distance)
+                    {
+                        min_distance = _distance;
+                        cluster_id_to_assign = cluster.get_cluster_id();
+                    }
+                }
+                if (cluster_id_to_assign != current_cluster_id)
+                {
+                    clusters[current_cluster_id - 1].remove_sample(sample);
+                    clusters[cluster_id_to_assign - 1].add_sample(sample);
+                    num_of_changes++;
+                }
+            }
+            // Update the centroid by averaging all the points in the cluster
+
+            // Check the Bayesian Information Criterion
+        }
     }
 
     // Check the Optimal Growth Temperature in the output (GC content & temp)
-    for (auto g : samples)
-    {
-        printf("%s\t", g.get_sample_name().c_str());
-        for (auto i : g.get_features())
-        {
-            printf("%.2f\t", i);
-        }
-        printf("\n");
-    }
+
     return 0;
 }
