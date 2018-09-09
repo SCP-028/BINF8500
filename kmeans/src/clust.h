@@ -5,6 +5,7 @@
 #include <sstream> // std::istringstrem
 #include <fstream> // std::ifstream, ofstream
 #include <cmath>   // std::pow, sqrt
+#include <limits>  // std::numeric_limits<float>::max()
 
 class Sample
 {
@@ -12,7 +13,7 @@ private:
   size_t sample_id;            // sample index from the original matrix
   std::string sample_name;     // name of the sample
   std::vector<float> features; // rest of the row in the input
-  size_t cluster_id = 0;       // the cluster that the sample belongs to
+  size_t cluster_id;           // the cluster that the sample belongs to
   float distance_to_centroid;  // should be updated with cluster_id
 
 public:
@@ -28,7 +29,8 @@ public:
 class Cluster
 {
 private:
-  size_t cluster_id;           // assigned to the samples. 0 is reserved for not belonging to any cluster.
+  size_t cluster_id;           // 0 is reserved for not belonging to any cluster.
+  size_t cluster_size;         // avoid empty clusters
   std::vector<float> centroid; // same length as Sample::features
   std::vector<Sample> samples; // samples within this cluster
 

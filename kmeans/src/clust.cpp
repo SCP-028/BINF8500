@@ -13,6 +13,8 @@ Sample::Sample(const vector<string> &v, size_t sample_id)
     {
         this->features.push_back(std::stof(v[i].c_str()));
     };
+    this->cluster_id = 0;
+    this->distance_to_centroid = std::numeric_limits<float>::max();
 }
 
 void Sample::set_cluster_id(size_t i)
@@ -59,6 +61,7 @@ float Sample::get_distance_to_centroid()
 Cluster::Cluster(int cluster_id, Sample &s)
 {
     this->cluster_id = cluster_id;
+    this->cluster_size = 0;
     this->centroid = s.get_features();
     add_sample(s);
     s.set_distance_to_centroid(centroid, true);
@@ -76,7 +79,9 @@ std::vector<float> Cluster::get_centroid()
 void Cluster::add_sample(Sample &s)
 {
     samples.push_back(s);
+    this->cluster_size++;
     s.set_cluster_id(this->cluster_id);
+    s.set_distance_to_centroid(this->centroid);
 }
 void Cluster::remove_sample(Sample &s)
 {
@@ -85,6 +90,7 @@ void Cluster::remove_sample(Sample &s)
         if (samples[i].get_sample_id() == s.get_sample_id())
         {
             samples.erase(samples.begin() + i);
+            this->cluster_size--;
             s.set_cluster_id(0);
         }
     }
@@ -206,7 +212,7 @@ void print_cluster_result(vector<Cluster> &res, vector<vector<string>> &matrix)
 {
     for (auto c : res)
     {
-        printf("\n\nCluster %d\n---------\n\n", c.get_cluster_id());
+        printf("\n\nCluster %zu\n---------\n\n", c.get_cluster_id());
         print_matrix_row(matrix, 0);
         vector<Sample> _samples = c.get_samples();
         for (auto s : _samples)

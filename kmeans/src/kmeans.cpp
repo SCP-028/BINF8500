@@ -1,5 +1,4 @@
 #include <cstdio> // std::printf
-#include <limits> // std::numeric_limits<float>::max()
 #include "clust.h"
 using namespace std;
 const static size_t MAX_ITER = 1000;
@@ -21,7 +20,6 @@ int main(int argc, char **argv)
     matrix.reserve(1000); // a little bit performance boost
     matrix = kmeans::read_table(matrix, argv[1]);
     const size_t NROW = matrix.size();
-    const size_t NCOL = matrix[0].size() - 1; // first column is used as row names later
 
     // Convert rows into objects for better readability
     vector<Sample> samples;
@@ -75,7 +73,7 @@ int main(int argc, char **argv)
             // Assign each point to the closest centroid
             for (auto sample : samples)
             {
-                float min_distance = numeric_limits<float>::max();
+                float min_distance = sample.get_distance_to_centroid();
                 size_t current_cluster_id = sample.get_cluster_id(),
                        cluster_id_to_assign = 0;
                 for (auto cluster : clusters)
@@ -97,12 +95,20 @@ int main(int argc, char **argv)
                 }
             }
             // Update the centroid by averaging all the points in the cluster
-
+            for (auto cluster : clusters)
+            {
+                if (cluster.get_samples().size() == 0)
+                {
+                    // deal with empty clusters
+                }
+                else
+                {
+                    cluster.update_centroid();
+                }
+            }
             // Check the Bayesian Information Criterion
         }
     }
-
-    // Check the Optimal Growth Temperature in the output (GC content & temp)
 
     return 0;
 }
