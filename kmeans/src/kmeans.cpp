@@ -48,7 +48,7 @@ int main(int argc, char **argv)
             vector<float> last_centroid = clusters.back().get_centroid();
             float max_distance = 0.0;
             size_t new_centroid_sample_id;
-            for (auto sample : samples)
+            for (auto &sample : samples)
             {
                 if (sample.get_cluster_id() == 0) // doesn't have a cluster yet
                 {
@@ -71,12 +71,12 @@ int main(int argc, char **argv)
         {
             num_of_changes = 0;
             // Assign each point to the closest centroid
-            for (auto sample : samples)
+            for (auto &sample : samples)
             {
                 float min_distance = sample.get_distance_to_centroid();
                 size_t current_cluster_id = sample.get_cluster_id(),
                        cluster_id_to_assign = 0;
-                for (auto cluster : clusters)
+                for (auto &cluster : clusters)
                 {
                     vector<float> _centroid = cluster.get_centroid(),
                                   _features = sample.get_features();
@@ -95,20 +95,23 @@ int main(int argc, char **argv)
                 }
             }
             // Update the centroid by averaging all the points in the cluster
-            for (auto cluster : clusters)
+
+            for (auto &cluster : clusters)
             {
-                if (cluster.get_samples().size() == 0)
+                if (cluster.get_cluster_size() == 0)
                 {
-                    // deal with empty clusters
-                }
-                else
-                {
-                    cluster.update_centroid();
+                    size_t big_clust_idx = kmeans::cluster_with_max_size(clusters);
+                    Sample furthest_sample = kmeans::furthest_sample_in_cluster(clusters[big_clust_idx]);
+                    clusters[big_clust_idx].remove_sample(furthest_sample);
+                    cluster.add_sample(furthest_sample);
                 }
             }
-            // Check the Bayesian Information Criterion
+            for (auto &cluster : clusters)
+            {
+                cluster.update_centroid();
+            }
         }
+        // Check the Bayesian Information Criterion
     }
-
     return 0;
 }

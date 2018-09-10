@@ -36,11 +36,12 @@ private:
 
 public:
   Cluster(int cluster_id, Sample &);
-  size_t get_cluster_id();
-  std::vector<float> get_centroid();
   void add_sample(Sample &);
   void remove_sample(Sample &);
+  size_t get_cluster_id();
+  std::vector<float> get_centroid();
   std::vector<Sample> get_samples();
+  size_t get_cluster_size();
   void update_centroid();
 };
 
@@ -64,6 +65,10 @@ void print_matrix_row(std::vector<std::vector<std::string>> &matrix, size_t n);
 
 void print_cluster_result(std::vector<Cluster> &res,
                           std::vector<std::vector<std::string>> &matrix);
+
+size_t cluster_with_max_size(std::vector<Cluster> &v);
+
+Sample furthest_sample_in_cluster(Cluster &c);
 
 void reset_samples(std::vector<Sample> &samples);
 } // namespace kmeans

@@ -1,5 +1,6 @@
 #include "clust.h"
-using std::vector, std::string;
+using std::string;
+using std::vector;
 
 /***************
  * class Sample *
@@ -157,7 +158,7 @@ read_table(vector<vector<string>> &matrix, const string input_file)
 float col_mean(vector<Sample> &v, size_t ncol)
 {
     float feature_mean = 0.0;
-    for (auto item : v)
+    for (auto &item : v)
     {
         feature_mean += item.get_features()[ncol];
     }
@@ -198,34 +199,37 @@ float distance(vector<float> &v1, vector<float> &v2)
     ans = std::sqrt(ans);
     return ans;
 }
-void print_matrix_row(vector<vector<string>> &matrix, size_t n)
-{
-    const size_t NCOL = matrix[0].size() - 1;
-    for (size_t i = 0; i < NCOL; i++)
-    {
-        printf("%s\t", matrix[n][i].c_str());
-    }
-    printf("%s\n", matrix[n][NCOL].c_str());
-}
 
-void print_cluster_result(vector<Cluster> &res, vector<vector<string>> &matrix)
+size_t cluster_with_max_size(vector<Cluster> &v)
 {
-    for (auto c : res)
+    size_t cluster_w_max_size = 0;
+    for (size_t i = 0; i < v.size(); i++)
     {
-        printf("\n\nCluster %zu\n---------\n\n", c.get_cluster_id());
-        print_matrix_row(matrix, 0);
-        vector<Sample> _samples = c.get_samples();
-        for (auto s : _samples)
+        if (v[i].get_cluster_size() > v[cluster_w_max_size].get_cluster_size())
         {
-            size_t _sample_id = s.get_sample_id();
-            print_matrix_row(matrix, _sample_id);
+            cluster_w_max_size = i;
         }
     }
+    return cluster_w_max_size;
+}
+
+Sample furthest_sample_in_cluster(Cluster &c)
+{
+    vector<Sample> ss = c.get_samples();
+    Sample furthest_sample = ss[0];
+    for (size_t i = 1; i < ss.size(); i++)
+    {
+        if (ss[i].get_distance_to_centroid() > furthest_sample.get_distance_to_centroid())
+        {
+            furthest_sample = ss[i];
+        }
+    }
+    return furthest_sample;
 }
 
 void reset_samples(vector<Sample> &samples)
 {
-    for (auto s : samples)
+    for (auto &s : samples)
     {
         s.set_cluster_id(0);
     }
