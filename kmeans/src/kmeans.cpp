@@ -1,7 +1,7 @@
 #include <cstdio> // printf
 #include "clust.h"
 using namespace std;
-const static size_t MAX_ITER = 2;
+const static size_t MAX_ITER = 1000;
 
 int main(int argc, char **argv)
 {
@@ -31,10 +31,10 @@ int main(int argc, char **argv)
     // Normalize data before clustering -> mean=0 and standard deviation=1 on each column
     kmeans::scale_features(samples);
 
-    // Keep increasing k until the Bayesian Information Criterion is reached
+    // Keep increasing k until the turn point of the Bayesian Information Criterion is reached
     vector<float> BICs, WCSSs;
-    // for (size_t k = 2; k < NROW; k++)
-    for (size_t k = 2; k < 4; k++)
+    vector<Cluster> ans;
+    for (size_t k = 2; k < NROW; k++)
     {
         // Pick 1st centroid randomly
         srand(time(NULL)); // use time as seed
@@ -54,7 +54,7 @@ int main(int argc, char **argv)
             // Assign each point to the closest centroid
             for (auto &sample : samples)
             {
-                float min_distance = sample.get_distance_to_centroid();
+                float min_distance = std::numeric_limits<float>::max();
                 size_t current_cluster_id = sample.get_cluster_id(),
                        cluster_id_to_assign = current_cluster_id;
                 vector<float> _features = sample.get_features();
@@ -70,10 +70,10 @@ int main(int argc, char **argv)
                 }
                 if (current_cluster_id != 0)
                 {
+                    clusters[current_cluster_id - 1].remove_sample(sample);
+                    clusters[cluster_id_to_assign - 1].add_sample(sample);
                     if (cluster_id_to_assign != current_cluster_id)
                     {
-                        clusters[current_cluster_id - 1].remove_sample(sample);
-                        clusters[cluster_id_to_assign - 1].add_sample(sample);
                         num_of_changes++;
                     }
                 }
@@ -83,17 +83,18 @@ int main(int argc, char **argv)
                     num_of_changes++;
                 }
             }
-            // Update the centroid by averaging all the points in the cluster
+            // check for empty clusters
+            Sample furthest_sample = kmeans::furthest_sample_in_clusters(clusters);
             for (auto &cluster : clusters)
             {
                 if (cluster.get_cluster_size() == 0)
                 {
-                    size_t big_clust_idx = kmeans::cluster_with_max_size(clusters);
-                    Sample furthest_sample = kmeans::furthest_sample_in_cluster(clusters[big_clust_idx]);
-                    clusters[big_clust_idx].remove_sample(furthest_sample);
+                    clusters[furthest_sample.get_cluster_id() - 1].remove_sample(furthest_sample);
                     cluster.add_sample(furthest_sample);
+                    furthest_sample = kmeans::furthest_sample_in_clusters(clusters);
                 }
             }
+            // Update the centroid by averaging all the points in the cluster
             for (auto &cluster : clusters)
             {
                 cluster.update_centroid();
@@ -111,26 +112,82 @@ int main(int argc, char **argv)
             }
         }
         BIC = (log(NROW - 1) * k * NCOL) + WCSS; // BIC = ln(n) * kd + WCSS
-        if (BICs.size() != 0 && BIC < BICs.back())
+        if (BICs.size() != 0 && BIC > BICs.back())
         {
-            //////////////////////////////////////////////////////////////////////////////////////////
-            printf("BIC turnpoint reached!");
-            //////////////////////////////////////////////////////////////////////////////////////////
+            printf("**************************\n"
+                   "* BIC turnpoint reached! *\n"
+                   "**************************\n"
+                   "k = %zu, WCSS = %.2f, BIC = %.2f\n"
+                   "Last BIC value was %.2f\n",
+                   k, WCSS, BIC, BICs.back());
             break;
         }
         else
         {
             BICs.push_back(BIC);
             WCSSs.push_back(WCSS);
+            ans = clusters;
             for (auto &s : samples)
             {
                 s.reset_sample();
             }
         }
     }
+    // print final result
+    size_t final_k = BICs.size() + 1;
+    printf("\n\nFinal result with k = %zu\n", final_k);
+    for (auto &c : ans)
+    {
+        printf("\nCluster %zu\n----------\n", c.get_cluster_id());
+        printf("\nSamples:\n\tDistance\tSample");
+        for (auto &s : c.get_samples())
+        {
+            printf("\n\t%.2f\t%s",
+                   s.get_distance_to_centroid(), s.get_sample_name().c_str());
+        }
+        printf("\n\n-----------------------------\n");
+    }
+    printf("\nCentroids\n----------\n");
+    for (auto &c : ans)
+    {
+        printf("\nCluster %zu:", c.get_cluster_id());
+        for (auto &p : c.get_centroid())
+        {
+            printf("\t%.2f", p);
+        }
+    }
+    printf("\n\nMutual pairwise distances among centroids:\n\n");
+    for (auto &c : ans)
+    {
+        printf("\tCluster %zu", c.get_cluster_id());
+    }
+    printf("\n");
+    for (auto &c : ans)
+    {
+        for (size_t i = 0; i < ans.size(); i++)
+        {
+            vector<float> v1 = c.get_centroid(), v2 = ans[i].get_centroid();
+            printf("\t%10.4f", kmeans::distance(v1, v2));
+        }
+        printf("\tCluster %zu\n", c.get_cluster_id());
+    }
+    printf("\n-----------------------------\n"
+           "\nMean Distances Within Cluster\n"
+           "-------------------------------\n");
+    for (auto &c : ans)
+    {
+        float mean_distance = 0.0;
+        for (auto &s : c.get_samples())
+        {
+            mean_distance += s.get_distance_to_centroid();
+        }
+        mean_distance /= c.get_samples().size();
+        printf("\nCluster %zu\t%.2f", c.get_cluster_id(), mean_distance);
+    }
+    printf("\n\n-----------------------------\n\nk\tWCSS\tBIC");
     for (size_t i = 0; i < BICs.size(); i++)
     {
-        printf("k = %zu, WCSS = %.2f, BIC = %.2f\n\n", i + 2, WCSSs[i], BICs[i]);
+        printf("\n%zu\t%.2f\t%.2f", i + 2, WCSSs[i], BICs[i]);
     }
     return 0;
 }

@@ -22,6 +22,7 @@ public:
   void set_cluster_id(size_t);
   void set_distance_to_centroid(std::vector<float> &);
   size_t get_sample_id();
+  std::string get_sample_name();
   std::vector<float> get_features();
   size_t get_cluster_id();
   float get_distance_to_centroid();
@@ -67,9 +68,7 @@ void initialize_clusters(std::vector<Cluster> &clusters,
                          std::vector<Sample> &samples,
                          size_t k);
 
-size_t cluster_with_max_size(std::vector<Cluster> &v);
-
-Sample furthest_sample_in_cluster(Cluster &c);
+Sample furthest_sample_in_clusters(std::vector<Cluster> &);
 
 namespace test
 {
