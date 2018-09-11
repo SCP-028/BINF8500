@@ -4,8 +4,8 @@
 #include <vector>
 #include <sstream> // std::istringstrem
 #include <fstream> // std::ifstream, ofstream
-#include <cmath>   // std::pow, sqrt
-#include <limits>  // std::numeric_limits<float>::max()
+#include <cmath>   // pow, sqrt, log, isnan
+#include <limits>  // std::numeric_limits<float>::quiet_NaN();
 
 class Sample
 {
@@ -17,13 +17,15 @@ private:
   float distance_to_centroid;  // should be updated with cluster_id
 
 public:
+  Sample();
   Sample(const std::vector<std::string> &, size_t sample_id);
   void set_cluster_id(size_t);
-  void set_distance_to_centroid(std::vector<float> &, bool initialize);
+  void set_distance_to_centroid(std::vector<float> &);
   size_t get_sample_id();
   std::vector<float> get_features();
   size_t get_cluster_id();
   float get_distance_to_centroid();
+  void reset_sample();
 };
 
 class Cluster
@@ -35,7 +37,7 @@ private:
   std::vector<Sample> samples; // samples within this cluster
 
 public:
-  Cluster(int cluster_id, Sample &);
+  Cluster(size_t cluster_id);
   void add_sample(Sample &);
   void remove_sample(Sample &);
   size_t get_cluster_id();
@@ -61,14 +63,16 @@ void scale_features(std::vector<Sample> &matrix);
 
 float distance(std::vector<float> &v1, std::vector<float> &v2);
 
-void print_matrix_row(std::vector<std::vector<std::string>> &matrix, size_t n);
-
-void print_cluster_result(std::vector<Cluster> &res,
-                          std::vector<std::vector<std::string>> &matrix);
+void initialize_clusters(std::vector<Cluster> &clusters,
+                         std::vector<Sample> &samples,
+                         size_t k);
 
 size_t cluster_with_max_size(std::vector<Cluster> &v);
 
 Sample furthest_sample_in_cluster(Cluster &c);
 
-void reset_samples(std::vector<Sample> &samples);
+namespace test
+{
+void print_cluster(Cluster &);
+} // namespace test
 } // namespace kmeans

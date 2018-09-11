@@ -5,6 +5,7 @@ using std::vector;
 /***************
  * class Sample *
  ****************/
+
 Sample::Sample(const vector<string> &v, size_t sample_id)
 {
     this->sample_id = sample_id;
@@ -15,7 +16,7 @@ Sample::Sample(const vector<string> &v, size_t sample_id)
         this->features.push_back(std::stof(v[i].c_str()));
     };
     this->cluster_id = 0;
-    this->distance_to_centroid = std::numeric_limits<float>::max();
+    this->distance_to_centroid = std::numeric_limits<float>::quiet_NaN();
 }
 
 void Sample::set_cluster_id(size_t i)
@@ -23,18 +24,9 @@ void Sample::set_cluster_id(size_t i)
     this->cluster_id = i;
 }
 
-void Sample::set_distance_to_centroid(vector<float> &centroid, bool initialize = false)
+void Sample::set_distance_to_centroid(vector<float> &centroid)
 {
-    if (initialize)
-    {
-        distance_to_centroid = 0.0;
-    }
-    else
-    {
-        float ans;
-        ans = kmeans::distance(centroid, features);
-        distance_to_centroid = ans;
-    }
+    this->distance_to_centroid = kmeans::distance(centroid, features);
 }
 
 size_t Sample::get_sample_id()
@@ -56,18 +48,44 @@ float Sample::get_distance_to_centroid()
     return this->distance_to_centroid;
 }
 
+void Sample::reset_sample()
+{
+    this->cluster_id = std::numeric_limits<unsigned>::quiet_NaN();
+    this->distance_to_centroid = std::numeric_limits<float>::quiet_NaN();
+}
+
 /*****************
  * class Cluster *
  *****************/
-Cluster::Cluster(int cluster_id, Sample &s)
+Cluster::Cluster(size_t cluster_id)
 {
     this->cluster_id = cluster_id;
     this->cluster_size = 0;
-    this->centroid = s.get_features();
-    add_sample(s);
-    s.set_distance_to_centroid(centroid, true);
 }
 
+void Cluster::add_sample(Sample &s)
+{
+    s.set_cluster_id(this->cluster_id);
+    if (this->centroid.size() == 0)
+    {
+        this->centroid = s.get_features();
+    }
+    s.set_distance_to_centroid(this->centroid);
+    this->samples.push_back(s);
+    this->cluster_size++;
+}
+void Cluster::remove_sample(Sample &s)
+{
+    for (size_t i = 0; i <= samples.size(); i++)
+    {
+        if (samples[i].get_sample_id() == s.get_sample_id())
+        {
+            s.reset_sample();
+            samples.erase(samples.begin() + i);
+            this->cluster_size--;
+        }
+    }
+}
 size_t Cluster::get_cluster_id()
 {
     return this->cluster_id;
@@ -77,29 +95,16 @@ std::vector<float> Cluster::get_centroid()
     return this->centroid;
 }
 
-void Cluster::add_sample(Sample &s)
-{
-    samples.push_back(s);
-    this->cluster_size++;
-    s.set_cluster_id(this->cluster_id);
-    s.set_distance_to_centroid(this->centroid);
-}
-void Cluster::remove_sample(Sample &s)
-{
-    for (size_t i = 0; i <= samples.size(); i++)
-    {
-        if (samples[i].get_sample_id() == s.get_sample_id())
-        {
-            samples.erase(samples.begin() + i);
-            this->cluster_size--;
-            s.set_cluster_id(0);
-        }
-    }
-}
 std::vector<Sample> Cluster::get_samples()
 {
     return this->samples;
 }
+
+size_t Cluster::get_cluster_size()
+{
+    return this->samples.size();
+}
+
 void Cluster::update_centroid()
 {
     const size_t NCOL = samples[0].get_features().size();
@@ -178,9 +183,9 @@ void scale_features(vector<Sample> &v)
         // calculate standard deviation
         for (size_t i = 0; i < NROW; i++)
         {
-            feature_sd += std::pow(v[i].get_features()[j] - feature_mean, 2);
+            feature_sd += pow(v[i].get_features()[j] - feature_mean, 2.0);
         }
-        feature_sd = std::sqrt(feature_sd / NROW);
+        feature_sd = sqrt(feature_sd / NROW);
         // scale feature
         for (size_t i = 0; i < NROW; i++)
         {
@@ -194,10 +199,35 @@ float distance(vector<float> &v1, vector<float> &v2)
     float ans = 0.0;
     for (size_t i = 0; i < v1.size(); i++)
     {
-        ans += std::pow(v1[i] - v2[i], 2);
+        ans += pow(v1[i] - v2[i], 2);
     }
-    ans = std::sqrt(ans);
     return ans;
+}
+
+void initialize_clusters(vector<Cluster> &clusters, vector<Sample> &samples, size_t k)
+{
+    for (size_t cluster_id = 2; cluster_id <= k; cluster_id++)
+    {
+        vector<float> last_centroid = clusters.back().get_centroid();
+        float max_distance = 0.0;
+        size_t new_centroid_sample_id = 0;
+        for (auto &sample : samples)
+        {
+            if (sample.get_cluster_id() == 0) // doesn't have a cluster yet
+            {
+                vector<float> _features = sample.get_features();
+                float _distance = kmeans::distance(_features, last_centroid);
+                if (_distance > max_distance)
+                {
+                    max_distance = _distance;
+                    new_centroid_sample_id = sample.get_sample_id();
+                }
+            }
+        }
+        // create new cluster with this sample as the centroid
+        clusters.emplace_back(cluster_id);
+        clusters.back().add_sample(samples[new_centroid_sample_id - 1]);
+    }
 }
 
 size_t cluster_with_max_size(vector<Cluster> &v)
@@ -227,11 +257,23 @@ Sample furthest_sample_in_cluster(Cluster &c)
     return furthest_sample;
 }
 
-void reset_samples(vector<Sample> &samples)
+namespace test
 {
-    for (auto &s : samples)
+void print_cluster(Cluster &c)
+{
+    printf("\n\nCluster %zu\n----------\n", c.get_cluster_id());
+    vector<float> centroid = c.get_centroid();
+    printf("Centroid:\n");
+    for (auto &v : centroid)
     {
-        s.set_cluster_id(0);
+        printf("\t%.2f", v);
+    }
+    vector<Sample> ss = c.get_samples();
+    printf("\nSamples:\n");
+    for (auto &s : ss)
+    {
+        printf("\n\t%.3f\tSample %zu\n", s.get_distance_to_centroid(), s.get_sample_id());
     }
 }
+} // namespace test
 } // namespace kmeans
