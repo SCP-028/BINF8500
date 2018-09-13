@@ -1,3 +1,7 @@
+/*
+ * QuickSort a fastq file based on the sequences.
+ * Author: Yi Zhou
+*/
 #include <cstdio>   // printf
 #include <cstdlib>  // exit
 #include <fstream>  // std::ifstream, ofstream

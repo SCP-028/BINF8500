@@ -69,9 +69,4 @@ void initialize_clusters(std::vector<Cluster> &clusters,
                          size_t k);
 
 Sample furthest_sample_in_clusters(std::vector<Cluster> &);
-
-namespace test
-{
-void print_cluster(Cluster &);
-} // namespace test
 } // namespace kmeans

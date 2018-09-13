@@ -1,3 +1,9 @@
+/*
+ * Perform k-means++ clustering on a tab-delimited file with rows as samples
+ * and columns as features. K values are automatically selected based on the
+ * Bayesian Information Criterion.
+ * Author: Yi Zhou
+*/
 #include <cstdio> // printf
 #include "clust.h"
 using namespace std;
