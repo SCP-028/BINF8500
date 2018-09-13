@@ -4,21 +4,19 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Build test.exe",
+      "label": "Build",
+      "command": "make",
       "type": "shell",
-      "command": "g++",
-      "args": [
-        "-g",
-        "main.cpp",
-        "-o",
-        "test.exe",
-        "-Wall",
-        "-Wextra",
-        "-pedantic"
-      ],
       "group": {
         "kind": "build",
         "isDefault": true
+      },
+      "options": {
+        "cwd": "${fileDirname}/../",
+        "shell": {
+          "executable": "C:\\Windows\\sysnative\\bash.exe",
+          "args": ["-c"]
+        }
       }
     }
   ]

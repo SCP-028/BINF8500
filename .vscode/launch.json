@@ -8,14 +8,13 @@
       "name": "(gdb) Bash on Windows Launch",
       "type": "cppdbg",
       "request": "launch",
-      "program": "/mnt/c/Users/yz73026/Desktop/Git/BINF8500/kmeans/yi_kmeans.exe",
-      "args": [
-        "/mnt/c/Users/yz73026/Desktop/Git/BINF8500/kmeans/data/Archaea1.txt"
-      ],
+      "program": "./yi_nw.exe",
+      "args": ["./data/HIV1a.fasta", "./data/HIV1b.fasta", "1", "-1", "-1"],
       "stopAtEntry": false,
-      "cwd": "/mnt/c/Users/yz73026/Desktop/Git/BINF8500/kmeans",
+      "cwd": "/mnt/c/Users/yz73026/Desktop/Git/BINF8500/Needleman_Wunsch",
       "environment": [],
       "externalConsole": true,
+      "preLaunchTask": "Build",
       "pipeTransport": {
         "debuggerPath": "/usr/bin/gdb",
         "pipeProgram": "${env:windir}\\system32\\bash.exe",
@@ -30,19 +29,9 @@
         }
       ],
       "sourceFileMap": {
-        "/mnt/c": "c:\\"
+        "/mnt/c": "c:\\",
+        "/mnt/d": "d:\\"
       }
-    },
-    {
-      "name": "(Windows) Launch",
-      "type": "cppvsdbg",
-      "request": "launch",
-      "program": "${workspaceFolder}/test.exe",
-      "args": ["./quicksort/sample1k.fastq"],
-      "stopAtEntry": false,
-      "cwd": "${workspaceFolder}",
-      "environment": [],
-      "externalConsole": true
     }
   ]
 }
