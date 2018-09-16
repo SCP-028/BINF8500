@@ -8,7 +8,7 @@
 #include <random>
 #include "clust.h"
 using namespace std;
-const static size_t MAX_ITER = 1000, ITER_EACH = 10;
+const static size_t MAX_ITER = 1000, ITER_EACH = 100;
 
 int main(int argc, char **argv)
 {
