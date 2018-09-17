@@ -51,7 +51,7 @@ int main(int argc, char **argv)
         float _BIC = numeric_limits<float>::quiet_NaN(),
               _WCSS = numeric_limits<float>::quiet_NaN();
         vector<Cluster> _ans;
-        /* repeat 10 times for each k and keep the one with min(BIC) because
+        /* repeat ITER_EACH times for each k and keep the one with min(BIC) because
          * different initial centroids may generate different clusters, and the
          * "turning point" of the BIC might not be the global optimum, so this
          * at least approaches the global optimum better
