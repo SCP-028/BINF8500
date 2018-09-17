@@ -5,17 +5,16 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "(gdb) Bash on Windows Launch",
+      "name": "(gdb) Bash on Windows Launch k-means",
       "type": "cppdbg",
       "request": "launch",
-      "program": "/mnt/c/Users/yz73026/Desktop/Git/BINF8500/kmeans/yi_kmeans.exe",
-      "args": [
-        "/mnt/c/Users/yz73026/Desktop/Git/BINF8500/kmeans/data/Archaea1.txt"
-      ],
+      "program": "./yi_kmeans.exe",
+      "args": ["./data/Bacteria+Archaea.txt"],
       "stopAtEntry": false,
       "cwd": "/mnt/c/Users/yz73026/Desktop/Git/BINF8500/kmeans",
       "environment": [],
       "externalConsole": true,
+      "preLaunchTask": "Build",
       "pipeTransport": {
         "debuggerPath": "/usr/bin/gdb",
         "pipeProgram": "${env:windir}\\system32\\bash.exe",
@@ -30,19 +29,38 @@
         }
       ],
       "sourceFileMap": {
-        "/mnt/c": "c:\\"
+        "/mnt/c": "c:\\",
+        "/mnt/d": "d:\\"
       }
     },
     {
-      "name": "(Windows) Launch",
-      "type": "cppvsdbg",
+      "name": "(gdb) Bash on Windows Launch Needleman-Wunsch",
+      "type": "cppdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/test.exe",
-      "args": ["./quicksort/sample1k.fastq"],
+      "program": "./yi_nw.exe",
+      "args": ["./data/HIV1a.fasta", "./data/HIV1b.fasta", "1", "-1", "-1"],
       "stopAtEntry": false,
-      "cwd": "${workspaceFolder}",
+      "cwd": "/mnt/c/Users/yz73026/Desktop/Git/BINF8500/Needleman_Wunsch",
       "environment": [],
-      "externalConsole": true
+      "externalConsole": true,
+      "preLaunchTask": "Build",
+      "pipeTransport": {
+        "debuggerPath": "/usr/bin/gdb",
+        "pipeProgram": "${env:windir}\\system32\\bash.exe",
+        "pipeArgs": ["-c"],
+        "pipeCwd": ""
+      },
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ],
+      "sourceFileMap": {
+        "/mnt/c": "c:\\",
+        "/mnt/d": "d:\\"
+      }
     }
   ]
 }

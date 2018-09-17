@@ -1,7 +1,14 @@
+/*
+ * Perform k-means++ clustering on a tab-delimited file with rows as samples
+ * and columns as features. K values are automatically selected based on the
+ * Bayesian Information Criterion.
+ * Author: Yi Zhou
+*/
 #include <cstdio> // printf
+#include <random>
 #include "clust.h"
 using namespace std;
-const static size_t MAX_ITER = 1000;
+const static size_t MAX_ITER = 1000, ITER_EACH = 100;
 
 int main(int argc, char **argv)
 {
@@ -15,6 +22,9 @@ int main(int argc, char **argv)
                argv[0], argc - 1, argv[0]);
         return 1;
     }
+    random_device rn;   // obtain a random number
+    mt19937 seed{rn()}; // seed the random number
+
     // Read file into vector of vectors
     vector<vector<string>> matrix;
     matrix.reserve(1000); // a little bit performance boost
@@ -28,111 +38,133 @@ int main(int argc, char **argv)
     {
         samples.emplace_back(matrix[i], i);
     }
+    uniform_int_distribution<size_t> range(0, samples.size() - 1);
+
     // Normalize data before clustering -> mean=0 and standard deviation=1 on each column
     kmeans::scale_features(samples);
 
-    // Keep increasing k until the turn point of the Bayesian Information Criterion is reached
+    // Keep increasing k until the turning point of the Bayesian Information Criterion is reached
     vector<float> BICs, WCSSs;
     vector<Cluster> ans;
     for (size_t k = 2; k < NROW; k++)
     {
-        // Pick 1st centroid randomly
-        srand(time(NULL)); // use time as seed
-        int centroid_one = rand() % NROW;
-        vector<Cluster> clusters;
-        clusters.emplace_back(1);
-        clusters[0].add_sample(samples[centroid_one]);
-        // find the point that's the furthest from the last centroid and
-        // assign it as the next centroid
-        kmeans::initialize_clusters(clusters, samples, k);
-
-        size_t iter_num = 0,
-               num_of_changes = 1;
-        while (iter_num < MAX_ITER && num_of_changes != 0)
+        float _BIC = numeric_limits<float>::quiet_NaN(),
+              _WCSS = numeric_limits<float>::quiet_NaN();
+        vector<Cluster> _ans;
+        /* repeat ITER_EACH times for each k and keep the one with min(BIC) because
+         * different initial centroids may generate different clusters, and the
+         * "turning point" of the BIC might not be the global optimum, so this
+         * at least approaches the global optimum better
+        */
+        for (size_t i = 0; i < ITER_EACH; i++)
         {
-            num_of_changes = 0;
-            // Assign each point to the closest centroid
-            for (auto &sample : samples)
+            for (auto &s : samples)
             {
-                float min_distance = std::numeric_limits<float>::max();
-                size_t current_cluster_id = sample.get_cluster_id(),
-                       cluster_id_to_assign = current_cluster_id;
-                vector<float> _features = sample.get_features();
-                for (auto &cluster : clusters)
+                s.reset_sample();
+            }
+            // Pick 1st centroid randomly
+            vector<Cluster> clusters;
+            clusters.emplace_back(1);
+            clusters[0].add_sample(samples[range(seed)]);
+            // find the point that's the furthest from the last centroid and
+            // assign it as the next centroid
+            kmeans::initialize_clusters(clusters, samples, k);
+
+            size_t iter_num = 0,
+                   num_of_changes = 1;
+            while (iter_num < MAX_ITER && num_of_changes != 0)
+            {
+                num_of_changes = 0;
+                // Assign each point to the closest centroid
+                for (auto &sample : samples)
                 {
-                    vector<float> _centroid = cluster.get_centroid();
-                    float _distance = kmeans::distance(_features, _centroid);
-                    if (std::isnan(min_distance) || _distance < min_distance)
+                    float min_distance = std::numeric_limits<float>::max();
+                    size_t current_cluster_id = sample.get_cluster_id(),
+                           cluster_id_to_assign = current_cluster_id;
+                    vector<float> _features = sample.get_features();
+                    for (auto &cluster : clusters)
                     {
-                        min_distance = _distance;
-                        cluster_id_to_assign = cluster.get_cluster_id();
+                        vector<float> _centroid = cluster.get_centroid();
+                        float _distance = kmeans::distance(_features, _centroid);
+                        if (std::isnan(min_distance) || _distance < min_distance)
+                        {
+                            min_distance = _distance;
+                            cluster_id_to_assign = cluster.get_cluster_id();
+                        }
                     }
-                }
-                if (current_cluster_id != 0)
-                {
-                    clusters[current_cluster_id - 1].remove_sample(sample);
-                    clusters[cluster_id_to_assign - 1].add_sample(sample);
-                    if (cluster_id_to_assign != current_cluster_id)
+                    if (current_cluster_id != 0)
                     {
+                        clusters[current_cluster_id - 1].remove_sample(sample);
+                        clusters[cluster_id_to_assign - 1].add_sample(sample);
+                        if (cluster_id_to_assign != current_cluster_id)
+                        {
+                            num_of_changes++;
+                        }
+                    }
+                    else
+                    {
+                        clusters[cluster_id_to_assign - 1].add_sample(sample);
                         num_of_changes++;
                     }
                 }
-                else
+                // check for empty clusters
+                Sample furthest_sample = kmeans::furthest_sample_in_clusters(clusters);
+                for (auto &cluster : clusters)
                 {
-                    clusters[cluster_id_to_assign - 1].add_sample(sample);
-                    num_of_changes++;
+                    if (cluster.get_cluster_size() == 0)
+                    {
+                        clusters[furthest_sample.get_cluster_id() - 1].remove_sample(furthest_sample);
+                        cluster.add_sample(furthest_sample);
+                        furthest_sample = kmeans::furthest_sample_in_clusters(clusters);
+                    }
                 }
+                // Update the centroid by averaging all the points in the cluster
+                for (auto &cluster : clusters)
+                {
+                    cluster.update_centroid();
+                }
+                iter_num++;
             }
-            // check for empty clusters
-            Sample furthest_sample = kmeans::furthest_sample_in_clusters(clusters);
+            // Check the Bayesian Information Criterion
+            float BIC, WCSS = 0.0;
             for (auto &cluster : clusters)
             {
-                if (cluster.get_cluster_size() == 0)
+                vector<Sample> ss = cluster.get_samples();
+                for (auto &sample : ss)
                 {
-                    clusters[furthest_sample.get_cluster_id() - 1].remove_sample(furthest_sample);
-                    cluster.add_sample(furthest_sample);
-                    furthest_sample = kmeans::furthest_sample_in_clusters(clusters);
+                    WCSS += sample.get_distance_to_centroid();
                 }
             }
-            // Update the centroid by averaging all the points in the cluster
-            for (auto &cluster : clusters)
+            BIC = (log(NROW - 1) * k * NCOL) + WCSS; // BIC = ln(n) * kd + WCSS
+            if (isnan(_BIC) || ((BIC < _BIC) && WCSS < _WCSS))
             {
-                cluster.update_centroid();
-            }
-            iter_num++;
-        }
-        // Check the Bayesian Information Criterion
-        float BIC, WCSS = 0.0;
-        for (auto &cluster : clusters)
-        {
-            vector<Sample> ss = cluster.get_samples();
-            for (auto &sample : ss)
-            {
-                WCSS += sample.get_distance_to_centroid();
+                _BIC = BIC;
+                _WCSS = WCSS;
+                _ans = clusters;
             }
         }
-        BIC = (log(NROW - 1) * k * NCOL) + WCSS; // BIC = ln(n) * kd + WCSS
-        if (BICs.size() != 0 && BIC > BICs.back())
+        if (BICs.size() != 0 && _BIC > BICs.back())
         {
             printf("**************************\n"
                    "* BIC turnpoint reached! *\n"
                    "**************************\n"
                    "k = %zu, WCSS = %.2f, BIC = %.2f\n"
                    "Last BIC value was %.2f\n",
-                   k, WCSS, BIC, BICs.back());
+                   k, _WCSS, _BIC, BICs.back());
             break;
         }
         else
         {
-            BICs.push_back(BIC);
-            WCSSs.push_back(WCSS);
-            ans = clusters;
+            BICs.push_back(_BIC);
+            WCSSs.push_back(_WCSS);
+            ans = _ans;
             for (auto &s : samples)
             {
                 s.reset_sample();
             }
         }
     }
+
     // print final result
     size_t final_k = BICs.size() + 1;
     printf("\n\nFinal result with k = %zu\n", final_k);
