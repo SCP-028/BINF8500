@@ -5,7 +5,6 @@
  * Author: Yi Zhou
 */
 #include <cstdio> // printf
-#include <random>
 #include "clust.h"
 using namespace std;
 const static size_t MAX_ITER = 1000, ITER_EACH = 100;
@@ -38,6 +37,7 @@ int main(int argc, char **argv)
     {
         samples.emplace_back(matrix[i], i);
     }
+    assert(samples.size() > 0);
     uniform_int_distribution<size_t> range(0, samples.size() - 1);
 
     // Normalize data before clustering -> mean=0 and standard deviation=1 on each column
@@ -66,8 +66,7 @@ int main(int argc, char **argv)
             vector<Cluster> clusters;
             clusters.emplace_back(1);
             clusters[0].add_sample(samples[range(seed)]);
-            // find the point that's the furthest from the last centroid and
-            // assign it as the next centroid
+            // k-means++ (https://en.wikipedia.org/wiki/K-means%2B%2B)
             kmeans::initialize_clusters(clusters, samples, k);
 
             size_t iter_num = 0,
