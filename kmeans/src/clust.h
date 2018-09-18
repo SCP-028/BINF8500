@@ -6,6 +6,8 @@
 #include <fstream> // std::ifstream
 #include <cmath>   // pow, sqrt, log, isnan
 #include <limits>  // std::numeric_limits<float>::quiet_NaN();
+#include <cassert>
+#include <random>
 
 class Sample
 {

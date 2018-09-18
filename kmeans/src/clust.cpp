@@ -219,27 +219,32 @@ float distance(vector<float> &v1, vector<float> &v2)
 
 void initialize_clusters(vector<Cluster> &clusters, vector<Sample> &samples, size_t k)
 {
+    assert(k >= 2);
+    std::random_device rn;
+    std::mt19937 seed{rn()};
     for (size_t cluster_id = 2; cluster_id <= k; cluster_id++)
     {
-        vector<float> last_centroid = clusters.back().get_centroid();
-        float max_distance = 0.0;
-        size_t new_centroid_sample_id = 0;
+        // calculate distances of each sample to the nearest centroid
+        vector<float> distances;
         for (auto &sample : samples)
         {
-            if (sample.get_cluster_id() == 0) // doesn't have a cluster yet
+            float min_distance = std::numeric_limits<float>::quiet_NaN();
+            for (auto &cluster : clusters)
             {
+                vector<float> centroid = cluster.get_centroid();
                 vector<float> _features = sample.get_features();
-                float _distance = kmeans::distance(_features, last_centroid);
-                if (_distance > max_distance)
+                float _distance = kmeans::distance(_features, centroid);
+                if (std::isnan(min_distance) || _distance < min_distance)
                 {
-                    max_distance = _distance;
-                    new_centroid_sample_id = sample.get_sample_id();
+                    min_distance = _distance;
                 }
             }
+            distances.push_back(min_distance);
         }
-        // create new cluster with this sample as the centroid
+        // used a weighted probability distribution to choose the next centroid
+        std::discrete_distribution<size_t> generator(distances.begin(), distances.end());
         clusters.emplace_back(cluster_id);
-        clusters.back().add_sample(samples[new_centroid_sample_id - 1]);
+        clusters.back().add_sample(samples[generator(seed)]);
     }
 }
 
