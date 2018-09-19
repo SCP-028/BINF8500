@@ -8,7 +8,7 @@
 #include <random>
 #include "clust.h"
 using namespace std;
-const static size_t MAX_ITER = 1000, ITER_EACH = 100;
+const static size_t MAX_ITER = 1000, ITER_EACH = 20;
 
 int main(int argc, char **argv)
 {
@@ -56,7 +56,8 @@ int main(int argc, char **argv)
          * "turning point" of the BIC might not be the global optimum, so this
          * at least approaches the global optimum better
         */
-        for (size_t i = 0; i < ITER_EACH; i++)
+        size_t iters = ITER_EACH * k;
+        for (size_t i = 0; i < iters; i++)
         {
             for (auto &s : samples)
             {
@@ -221,5 +222,6 @@ int main(int argc, char **argv)
     {
         printf("\n%zu\t%.2f\t%.2f", i + 2, WCSSs[i], BICs[i]);
     }
+    printf("\n");
     return 0;
 }
