@@ -38,7 +38,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "./yi_nw.exe",
-      "args": ["./data/HIV1a.fasta", "./data/HIV1b.fasta", "1", "-1", "-1"],
+      "args": ["./data/Test01.fasta", "./data/Test02.fasta", "1", "-1", "-1"],
       "stopAtEntry": false,
       "cwd": "/mnt/c/Users/yz73026/Desktop/Git/BINF8500/Needleman_Wunsch",
       "environment": [],
