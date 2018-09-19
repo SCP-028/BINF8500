@@ -3,12 +3,105 @@
  * Author: Yi Zhou
 */
 #include "nw.h"
-// Read file in and parse sequence into vector
 
-// Construct score matrix (reverse the sequence)
+using namespace std;
 
-// Calculate score
+const unsigned PRINT_WIDTH = 70;
 
-// Trace back and find the alignment
+int main(int argc, char **argv)
+{
+    if (argc != 6)
+    {
+        printf("[Error] %s takes 5 arguments, but %d were given.\n\n"
+               "Usage: %s <seq1> <seq2> <match_score> <mismatch_score> <gap_penalty>\n\n"
+               "This program implements the Needleman-Wunsch algorithm and\n"
+               "align the two given sequences.\n"
+               "Matches and mismatches have uniform scores, whereas gaps have a linear penalty.\n",
+               argv[0], argc - 1, argv[0]);
+        return 1;
+    }
+    // Read file in and parse sequence into a single string
+    const float MATCH = stof(argv[3]), MISMATCH = stof(argv[4]), GAP = stof(argv[5]);
+    string seq1, seq2;
+    seq1 = nw::read_fasta(argv[1]);
+    seq2 = nw::read_fasta(argv[2]);
 
-// Print results
+    // convert all to upper case and remove non-alphabetic characters
+    nw::prepare_sequence(seq1);
+    nw::prepare_sequence(seq2);
+    const size_t NROW = seq1.length(),
+                 NCOL = seq2.length();
+    printf("\nSequence 1: (%s, %zu characters):\n\n%s\n\n",
+           argv[1], NROW, seq1.c_str());
+    printf("\nSequence 2: (%s, %zu characters):\n\n%s\n\n",
+           argv[2], NCOL, seq2.c_str());
+
+    // Construct score matrix (reverse the sequence)
+    nw::reverse_string(seq1);
+    nw::reverse_string(seq2);
+    printf("\nScores:\n\tMatch: %.2f\n\tMismatch: %.2f\n\tGap: %.2f (linear)\n\n",
+           MATCH, MISMATCH, GAP);
+    vector<vector<float>> matrix(NROW + 1, vector<float>(NCOL + 1));
+    nw::initialize_score_matrix(matrix, GAP);
+
+    // Calculate score
+    for (size_t i = 1; i <= NROW; i++)
+    {
+        for (size_t j = 1; j <= NCOL; j++)
+        {
+            matrix[i][j] = nw::max_score(nw::score_left(matrix, i, j, GAP),
+                                         nw::score_top_left(matrix, i, j,
+                                                            seq1, seq2,
+                                                            MATCH, MISMATCH),
+                                         nw::score_top(matrix, i, j, GAP));
+        }
+    }
+
+    // Trace back and find the alignment
+    size_t i = NROW, j = NCOL;
+    string res1, res2, alignment;
+    while (i > 0 || j > 0)
+    {
+        if (nw::score_left(matrix, i, j, GAP) == matrix[i][j])
+        {
+            res1 += '-';
+            res2 += seq2[j - 1];
+            alignment += ' ';
+            j--;
+        }
+        else if (nw::score_top(matrix, i, j, GAP) == matrix[i][j])
+        {
+            res1 += seq1[i - 1];
+            res2 += '-';
+            alignment += ' ';
+            i--;
+        }
+        else
+        {
+            res1 += seq1[i - 1];
+            res2 += seq2[j - 1];
+            if (seq1[i - 1] == seq2[j - 1])
+            {
+
+                alignment += '*';
+            }
+            else
+            {
+                alignment += ' ';
+            }
+            i--;
+            j--;
+        }
+    }
+
+    // Print results
+    for (size_t i = 0; i < res1.length(); i += PRINT_WIDTH)
+    {
+        size_t char_num = 1 + i;
+        printf("%8zu: %s\n", char_num, res1.substr(i, PRINT_WIDTH).c_str());
+        printf("%10c%s\n", ' ', alignment.substr(i, PRINT_WIDTH).c_str());
+        printf("%8zu: %s\n\n", char_num, res2.substr(i, PRINT_WIDTH).c_str());
+    }
+
+    return 0;
+}
