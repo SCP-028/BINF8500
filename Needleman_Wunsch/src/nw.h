@@ -12,7 +12,7 @@
 namespace nw
 {
 std::string read_fasta(const std::string input_file);
-void strip_newline(std::string &s);
+void strip_non_alphabetic(std::string &s);
 void to_upper_case(std::string &s);
 void reverse_string(std::string &s);
 void prepare_sequence(std::string &s);
@@ -26,6 +26,4 @@ float score_left(std::vector<std::vector<float>> &m,
 float score_top(std::vector<std::vector<float>> &m,
                 size_t i, size_t j, float gap_score);
 float max_score(float, float, float);
-void print_score_matrix(std::vector<std::vector<float>> &m,
-                        std::string &seq1, std::string &seq2);
 } // namespace nw

@@ -22,12 +22,19 @@ string read_fasta(const string input_file)
     }
     return buffer.str();
 }
-void strip_newline(string &s)
+
+void strip_non_alphabetic(string &s)
 {
-    for (size_t i = s.find('\n'); i != string::npos; i = s.find('\n'))
+    size_t j = 0;
+    for (size_t i = 0; i < s.length(); i++)
     {
-        s.erase(i);
+        if (s[i] >= 'A' && s[i] <= 'Z')
+        {
+            s[j] = s[i];
+            j++;
+        }
     }
+    s = s.substr(0, j);
 }
 void to_upper_case(string &s)
 {
@@ -50,9 +57,8 @@ void reverse_string(string &s)
 }
 void prepare_sequence(string &s)
 {
-    strip_newline(s);
     to_upper_case(s);
-    reverse_string(s);
+    strip_non_alphabetic(s);
 }
 void initialize_score_matrix(vector<vector<float>> &m, float gap_score)
 {
@@ -106,27 +112,5 @@ float max_score(float a, float b, float c)
         max = c;
     }
     return max;
-}
-void print_score_matrix(vector<vector<float>> &m,
-                        string &seq1, string &seq2)
-{
-    printf(",Seq2");
-    for (auto &c : seq2)
-    {
-        printf(",%c", c);
-    }
-    printf("\nSeq1");
-    for (auto &score : m[0])
-    {
-        printf(",%.1f", score);
-    }
-    for (size_t i = 1; i <= seq1.length(); i++)
-    {
-        printf("\n%c", seq1[i - 1]);
-        for (auto &score : m[i])
-        {
-            printf(",%.1f", score);
-        }
-    }
 }
 } // namespace nw
