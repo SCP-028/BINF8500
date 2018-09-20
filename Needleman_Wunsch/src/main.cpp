@@ -41,7 +41,7 @@ int main(int argc, char **argv)
     nw::reverse_string(seq2);
     printf("\nScores:\n\tMatch: %.2f\n\tMismatch: %.2f\n\tGap: %.2f (linear)\n\n",
            MATCH, MISMATCH, GAP);
-    vector<vector<float>> matrix(NROW + 1, vector<float>(NCOL + 1));
+    Matrix matrix(NROW + 1, vector<float>(NCOL + 1));
     nw::initialize_score_matrix(matrix, GAP);
 
     // Calculate score
@@ -60,6 +60,10 @@ int main(int argc, char **argv)
     // Trace back and find the alignment
     size_t i = NROW, j = NCOL;
     string res1, res2, alignment;
+    const size_t result_len = NROW + NCOL;
+    res1.reserve(result_len);
+    res2.reserve(result_len);
+    alignment.reserve(result_len);
     while (i > 0 || j > 0)
     {
         if (nw::score_left(matrix, i, j, GAP) == matrix[i][j])
@@ -95,7 +99,8 @@ int main(int argc, char **argv)
     }
 
     // Print results
-    for (size_t i = 0; i < res1.length(); i += PRINT_WIDTH)
+    const size_t print_len = res1.length();
+    for (size_t i = 0; i < print_len; i += PRINT_WIDTH)
     {
         size_t char_num = 1 + i;
         printf("%8zu: %s\n", char_num, res1.substr(i, PRINT_WIDTH).c_str());
