@@ -99,6 +99,7 @@ int main(int argc, char **argv)
     }
 
     // Print results
+    printf("The final alignment score is %.2f\n\n", matrix[NROW][NCOL]);
     const size_t print_len = res1.length();
     for (size_t i = 0; i < print_len; i += PRINT_WIDTH)
     {
