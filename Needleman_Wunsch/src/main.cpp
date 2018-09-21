@@ -95,6 +95,7 @@ int main(int argc, char **argv)
     }
 
     // Print results
+    printf("The final alignment score is %.2f\n\n", matrix[NROW][NCOL]);
     for (size_t i = 0; i < res1.length(); i += PRINT_WIDTH)
     {
         size_t char_num = 1 + i;
