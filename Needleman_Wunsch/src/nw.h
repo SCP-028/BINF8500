@@ -4,10 +4,7 @@
 #include <vector>
 #include <sstream> // std::stringstream
 #include <fstream> // std::ifstream
-#include <cmath>   // pow, sqrt, log, isnan
-#include <limits>  // std::numeric_limits<float>::quiet_NaN();
 #include <cstdio>
-#include <iostream>
 
 namespace nw
 {
