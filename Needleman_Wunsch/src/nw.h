@@ -25,4 +25,5 @@ float score_left(Matrix &m,
 float score_top(Matrix &m,
                 size_t i, size_t j, float gap_score);
 float max_score(float, float, float);
+size_t count_gap(std::string &);
 } // namespace nw

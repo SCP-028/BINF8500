@@ -6,7 +6,7 @@
 
 using namespace std;
 
-const unsigned PRINT_WIDTH = 70;
+const unsigned PRINT_WIDTH = 60;
 
 int main(int argc, char **argv)
 {
@@ -101,12 +101,17 @@ int main(int argc, char **argv)
     // Print results
     printf("The final alignment score is %.2f\n\n", matrix[NROW][NCOL]);
     const size_t print_len = res1.length();
+    size_t seq_pos1 = 1, seq_pos2 = 1;
     for (size_t i = 0; i < print_len; i += PRINT_WIDTH)
     {
-        size_t char_num = 1 + i;
-        printf("%8zu: %s\n", char_num, res1.substr(i, PRINT_WIDTH).c_str());
-        printf("%10c%s\n", ' ', alignment.substr(i, PRINT_WIDTH).c_str());
-        printf("%8zu: %s\n\n", char_num, res2.substr(i, PRINT_WIDTH).c_str());
+        string substring1 = res1.substr(i, PRINT_WIDTH),
+               substring2 = alignment.substr(i, PRINT_WIDTH),
+               substring3 = res2.substr(i, PRINT_WIDTH);
+        printf("%8zu: %s\n", seq_pos1, substring1.c_str());
+        printf("%10c%s\n", ' ', substring2.c_str());
+        printf("%8zu: %s\n\n", seq_pos2, substring3.c_str());
+        seq_pos1 += PRINT_WIDTH - nw::count_gap(substring1);
+        seq_pos2 += PRINT_WIDTH - nw::count_gap(substring3);
     }
 
     return 0;
