@@ -6,7 +6,7 @@
 
 using namespace std;
 
-const unsigned PRINT_WIDTH = 70;
+const unsigned PRINT_WIDTH = 60;
 
 int main(int argc, char **argv)
 {
@@ -41,7 +41,7 @@ int main(int argc, char **argv)
     nw::reverse_string(seq2);
     printf("\nScores:\n\tMatch: %.2f\n\tMismatch: %.2f\n\tGap: %.2f (linear)\n\n",
            MATCH, MISMATCH, GAP);
-    vector<vector<float>> matrix(NROW + 1, vector<float>(NCOL + 1));
+    Matrix matrix(NROW + 1, vector<float>(NCOL + 1));
     nw::initialize_score_matrix(matrix, GAP);
 
     // Calculate score
@@ -60,6 +60,10 @@ int main(int argc, char **argv)
     // Trace back and find the alignment
     size_t i = NROW, j = NCOL;
     string res1, res2, alignment;
+    const size_t result_len = NROW + NCOL;
+    res1.reserve(result_len);
+    res2.reserve(result_len);
+    alignment.reserve(result_len);
     while (i > 0 || j > 0)
     {
         if (nw::score_left(matrix, i, j, GAP) == matrix[i][j])
@@ -95,12 +99,19 @@ int main(int argc, char **argv)
     }
 
     // Print results
-    for (size_t i = 0; i < res1.length(); i += PRINT_WIDTH)
+    printf("The final alignment score is %.2f\n\n", matrix[NROW][NCOL]);
+    const size_t print_len = res1.length();
+    size_t seq_pos1 = 1, seq_pos2 = 1;
+    for (size_t i = 0; i < print_len; i += PRINT_WIDTH)
     {
-        size_t char_num = 1 + i;
-        printf("%8zu: %s\n", char_num, res1.substr(i, PRINT_WIDTH).c_str());
-        printf("%10c%s\n", ' ', alignment.substr(i, PRINT_WIDTH).c_str());
-        printf("%8zu: %s\n\n", char_num, res2.substr(i, PRINT_WIDTH).c_str());
+        string substring1 = res1.substr(i, PRINT_WIDTH),
+               substring2 = alignment.substr(i, PRINT_WIDTH),
+               substring3 = res2.substr(i, PRINT_WIDTH);
+        printf("%8zu: %s\n", seq_pos1, substring1.c_str());
+        printf("%10c%s\n", ' ', substring2.c_str());
+        printf("%8zu: %s\n\n", seq_pos2, substring3.c_str());
+        seq_pos1 += PRINT_WIDTH - nw::count_gap(substring1);
+        seq_pos2 += PRINT_WIDTH - nw::count_gap(substring3);
     }
 
     return 0;

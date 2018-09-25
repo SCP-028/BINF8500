@@ -22,15 +22,14 @@ string read_fasta(const string input_file)
     }
     return buffer.str();
 }
-
 void strip_non_alphabetic(string &s)
 {
     size_t j = 0;
-    for (size_t i = 0; i < s.length(); i++)
+    for (auto &c : s)
     {
-        if (s[i] >= 'A' && s[i] <= 'Z')
+        if (c >= 'A' && c <= 'Z')
         {
-            s[j] = s[i];
+            s[j] = c;
             j++;
         }
     }
@@ -60,7 +59,7 @@ void prepare_sequence(string &s)
     to_upper_case(s);
     strip_non_alphabetic(s);
 }
-void initialize_score_matrix(vector<vector<float>> &m, float gap_score)
+void initialize_score_matrix(Matrix &m, float gap_score)
 {
     m[0][0] = 0;
     for (size_t i = 1; i < m.size(); i++)
@@ -72,8 +71,7 @@ void initialize_score_matrix(vector<vector<float>> &m, float gap_score)
         m[0][j] = m[0][j - 1] + gap_score;
     }
 }
-float score_top_left(vector<vector<float>> &m,
-                     size_t i, size_t j,
+float score_top_left(Matrix &m, size_t i, size_t j,
                      string &seq1, string &seq2,
                      float match_score, float mismatch_score)
 {
@@ -88,15 +86,11 @@ float score_top_left(vector<vector<float>> &m,
     }
     return score;
 }
-
-float score_left(std::vector<std::vector<float>> &m,
-                 size_t i, size_t j, float gap_score)
+float score_left(Matrix &m, size_t i, size_t j, float gap_score)
 {
     return m[i][j - 1] + gap_score;
 }
-
-float score_top(std::vector<std::vector<float>> &m,
-                size_t i, size_t j, float gap_score)
+float score_top(Matrix &m, size_t i, size_t j, float gap_score)
 {
     return m[i - 1][j] + gap_score;
 }
@@ -112,5 +106,17 @@ float max_score(float a, float b, float c)
         max = c;
     }
     return max;
+}
+size_t count_gap(std::string &s)
+{
+    size_t num = 0;
+    for (auto &c : s)
+    {
+        if (c == '-')
+        {
+            num += 1;
+        }
+    }
+    return num;
 }
 } // namespace nw

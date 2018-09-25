@@ -10,7 +10,7 @@ SRC_PATH = ./src
 # Space-separated pkg-config libraries used by this project
 LIBS =
 # General compiler flags
-COMPILE_FLAGS = -std=c++17 -Wall -Wextra -g -pedantic -O3
+COMPILE_FLAGS = -std=c++17 -Wall -Wextra -g -pedantic -O3 -march=native
 # Additional release-specific flags
 RCOMPILE_FLAGS = -D NDEBUG
 # Additional debug-specific flags
@@ -23,10 +23,6 @@ LINK_FLAGS =
 RLINK_FLAGS =
 # Additional debug-specific linker settings
 DLINK_FLAGS =
-# Destination directory, like a jail or mounted system
-DESTDIR = /
-# Install path (bin/ is appended automatically)
-INSTALL_PREFIX = usr/local
 #### END PROJECT SETTINGS ####
 
 # Optionally you may move the section above to a separate config.mk file, and
@@ -48,10 +44,6 @@ print-%: ; @echo $*=$($*)
 SHELL = /bin/bash
 # Clear built-in rules
 .SUFFIXES:
-# Programs for installation
-INSTALL = install
-INSTALL_PROGRAM = $(INSTALL)
-INSTALL_DATA = $(INSTALL) -m 644
 
 # Append pkg-config specific libraries if need be
 ifneq ($(LIBS),)
@@ -69,15 +61,10 @@ endif
 # Combine compiler and linker flags
 release: export CXXFLAGS := $(CXXFLAGS) $(COMPILE_FLAGS) $(RCOMPILE_FLAGS)
 release: export LDFLAGS := $(LDFLAGS) $(LINK_FLAGS) $(RLINK_FLAGS)
-debug: export CXXFLAGS := $(CXXFLAGS) $(COMPILE_FLAGS) $(DCOMPILE_FLAGS)
-debug: export LDFLAGS := $(LDFLAGS) $(LINK_FLAGS) $(DLINK_FLAGS)
 
 # Build and output paths
 release: export BUILD_PATH := build/release
 release: export BIN_PATH := bin/release
-debug: export BUILD_PATH := build/debug
-debug: export BIN_PATH := bin/debug
-install: export BIN_PATH := bin/release
 
 # Find all source files in the source directory, sorted by most
 # recently modified
@@ -119,29 +106,6 @@ else
 		echo `date -u -d @$$st '+%H:%M:%S'`
 endif
 
-# Version macros
-# Comment/remove this section to remove versioning
-USE_VERSION := false
-# If this isn't a git repo or the repo has no tags, git describe will return non-zero
-ifeq ($(shell git describe > /dev/null 2>&1 ; echo $$?), 0)
-	USE_VERSION := true
-	VERSION := $(shell git describe --tags --long --dirty --always | \
-		sed 's/v\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)-\?.*-\([0-9]*\)-\(.*\)/\1 \2 \3 \4 \5/g')
-	VERSION_MAJOR := $(word 1, $(VERSION))
-	VERSION_MINOR := $(word 2, $(VERSION))
-	VERSION_PATCH := $(word 3, $(VERSION))
-	VERSION_REVISION := $(word 4, $(VERSION))
-	VERSION_HASH := $(word 5, $(VERSION))
-	VERSION_STRING := \
-		"$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_PATCH).$(VERSION_REVISION)-$(VERSION_HASH)"
-	override CXXFLAGS := $(CXXFLAGS) \
-		-D VERSION_MAJOR=$(VERSION_MAJOR) \
-		-D VERSION_MINOR=$(VERSION_MINOR) \
-		-D VERSION_PATCH=$(VERSION_PATCH) \
-		-D VERSION_REVISION=$(VERSION_REVISION) \
-		-D VERSION_HASH=\"$(VERSION_HASH)\"
-endif
-
 # Standard, non-optimized release build
 .PHONY: release
 release: dirs
@@ -155,37 +119,12 @@ endif
 	@echo -n "Total build time: "
 	@$(END_TIME)
 
-# Debug build for gdb debugging
-.PHONY: debug
-debug: dirs
-ifeq ($(USE_VERSION), true)
-	@echo "Beginning debug build v$(VERSION_STRING)"
-else
-	@echo "Beginning debug build"
-endif
-	@$(START_TIME)
-	@$(MAKE) all --no-print-directory
-	@echo -n "Total build time: "
-	@$(END_TIME)
-
 # Create the directories used in the build
 .PHONY: dirs
 dirs:
 	@echo "Creating directories"
 	@mkdir -p $(dir $(OBJECTS))
 	@mkdir -p $(BIN_PATH)
-
-# Installs to the set path
-.PHONY: install
-install:
-	@echo "Installing to $(DESTDIR)$(INSTALL_PREFIX)/bin"
-	@$(INSTALL_PROGRAM) $(BIN_PATH)/$(BIN_NAME) $(DESTDIR)$(INSTALL_PREFIX)/bin
-
-# Uninstalls the program
-.PHONY: uninstall
-uninstall:
-	@echo "Removing $(DESTDIR)$(INSTALL_PREFIX)/bin/$(BIN_NAME)"
-	@$(RM) $(DESTDIR)$(INSTALL_PREFIX)/bin/$(BIN_NAME)
 
 # Removes all build files
 .PHONY: clean
