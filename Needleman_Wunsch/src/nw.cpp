@@ -5,7 +5,7 @@ using std::vector;
 
 namespace nw
 {
-string read_fasta(const string input_file)
+string read_fasta(const string &input_file)
 {
     std::ifstream fin(input_file);
     std::stringstream buffer;
@@ -72,7 +72,7 @@ void initialize_score_matrix(Matrix &m, float gap_score)
     }
 }
 float score_top_left(Matrix &m, size_t i, size_t j,
-                     string &seq1, string &seq2,
+                     const string &seq1, const string &seq2,
                      float match_score, float mismatch_score)
 {
     float score;
@@ -94,7 +94,7 @@ float score_top(Matrix &m, size_t i, size_t j, float gap_score)
 {
     return m[i - 1][j] + gap_score;
 }
-float max_score(float a, float b, float c)
+float max_score(const float a, const float b, const float c)
 {
     float max = a;
     if (b > max)
@@ -107,7 +107,7 @@ float max_score(float a, float b, float c)
     }
     return max;
 }
-size_t count_gap(std::string &s)
+size_t count_gap(const std::string &s)
 {
     size_t num = 0;
     for (auto &c : s)
