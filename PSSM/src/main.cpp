@@ -80,7 +80,7 @@ int main(int argc, char **argv)
               reverse_score = ans.calc_score_for_reverse(DNA, i);
         if (forward_score >= MIN_SCORE)
         {
-            char buf[128];
+            char buf[65];
             sprintf(buf, fmt,
                     i + 1, i + motif_len, '+',
                     DNA.substr(i, motif_len).c_str(),
@@ -90,7 +90,7 @@ int main(int argc, char **argv)
         }
         if (reverse_score >= MIN_SCORE)
         {
-            char buf[128];
+            char buf[65];
             sprintf(buf, fmt,
                     i + 1, i + motif_len, '-',
                     ans.generate_reverse_strand(DNA.substr(i, motif_len)).c_str(),
