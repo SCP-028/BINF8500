@@ -3,6 +3,8 @@
  * Author: Yi Zhou
 */
 #include "pssm.h"
+#include <map>
+
 using namespace std;
 
 const float PSEUDOCOUNT = 0.25;
@@ -62,32 +64,44 @@ int main(int argc, char **argv)
 
     // Scan the direct and complementary strands for the motif
     const float MIN_SCORE = (argc == 4) ? stof(argv[3]) : input_motif_scores[min_motif_score_idx];
-
     printf("\nMatches with score %.3f or higher found in %s (length %zu bp):\n"
            "%-10s%-10s%-8s%-25s%-10s\n",
            MIN_SCORE, argv[2], DNA.size(),
            "Start", "End", "Strand", "Sequence", "Score");
 
     const size_t i_max = DNA.size() - motif_len + 1;
+    const char fmt[] = "%-10zu%-10zu%-8c%-25s%-10.3f\n";
+    map<size_t, string> hits;
+    size_t hit_num = 0;
+#pragma omp parallel for
     for (size_t i = 0; i < i_max; i++)
     {
         float forward_score = ans.calc_score_for_forward(DNA, i),
               reverse_score = ans.calc_score_for_reverse(DNA, i);
         if (forward_score >= MIN_SCORE)
         {
-            printf("%-10zu%-10zu%-8c%-25s%-10.3f\n",
-                   i + 1, i + motif_len, '+',
-                   DNA.substr(i, motif_len).c_str(),
-                   forward_score);
+            char buf[128];
+            sprintf(buf, fmt,
+                    i + 1, i + motif_len, '+',
+                    DNA.substr(i, motif_len).c_str(),
+                    forward_score);
+            size_t buf_id = i + hit_num++;
+            hits.insert(pair<size_t, string>(buf_id, buf));
         }
         if (reverse_score >= MIN_SCORE)
         {
-
-            printf("%-10zu%-10zu%-8c%-25s%-10.3f\n",
-                   i + 1, i + motif_len, '-',
-                   ans.generate_reverse_strand(DNA.substr(i, motif_len)).c_str(),
-                   reverse_score);
+            char buf[128];
+            sprintf(buf, fmt,
+                    i + 1, i + motif_len, '-',
+                    ans.generate_reverse_strand(DNA.substr(i, motif_len)).c_str(),
+                    reverse_score);
+            size_t buf_id = i + hit_num++;
+            hits.insert(pair<size_t, string>(buf_id, buf));
         }
+    }
+    for (auto &c : hits)
+    {
+        printf("%s", c.second.c_str());
     }
     return 0;
 }
