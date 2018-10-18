@@ -64,7 +64,7 @@ int main(int argc, char **argv)
     res1.reserve(result_len);
     res2.reserve(result_len);
     alignment.reserve(result_len);
-    while (i > 0 || j > 0)
+    while (i > 0 && j > 0)
     {
         if (nw::score_left(matrix, i, j, GAP) == matrix[i][j])
         {
@@ -96,6 +96,21 @@ int main(int argc, char **argv)
             i--;
             j--;
         }
+    }
+    // Deal with consecutive gaps at the ends of the alignment
+    while (j > 0)
+    {
+        res1 += '-';
+        res2 += seq2[j - 1];
+        alignment += ' ';
+        j--;
+    }
+    while (i > 0)
+    {
+        res1 += seq1[i - 1];
+        res2 += '-';
+        alignment += ' ';
+        i--;
     }
 
     // Print results
