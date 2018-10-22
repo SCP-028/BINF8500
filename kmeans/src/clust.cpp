@@ -6,62 +6,44 @@ using std::vector;
  * class Sample *
  ****************/
 
-Sample::Sample()
-{
+Sample::Sample() {
     this->sample_name = "EMPTY_SAMPLE";
     this->cluster_id = 0;
     this->distance_to_centroid = std::numeric_limits<float>::quiet_NaN();
 }
 
-Sample::Sample(const vector<string> &v, size_t sample_id)
-{
+Sample::Sample(const vector<string> &v, size_t sample_id) {
     this->sample_id = sample_id;
-    // first item should be the name, all the others should be converted to floats
+    // first item should be the name, all the others should be converted to
+    // floats
     this->sample_name = v[0];
-    for (size_t i = 1; i < v.size(); i++)
-    {
+    for (size_t i = 1; i < v.size(); i++) {
         this->features.push_back(std::stof(v[i].c_str()));
     };
     this->cluster_id = 0;
     this->distance_to_centroid = std::numeric_limits<float>::quiet_NaN();
 }
 
-void Sample::set_cluster_id(size_t i)
-{
-    this->cluster_id = i;
+void Sample::set_cluster_id(size_t i) { this->cluster_id = i; }
+
+void Sample::set_feature(size_t i, float feature) {
+    this->features[i] = feature;
 }
 
-void Sample::set_distance_to_centroid(vector<float> &centroid)
-{
+void Sample::set_distance_to_centroid(vector<float> &centroid) {
     this->distance_to_centroid = kmeans::distance(centroid, features);
 }
 
-size_t Sample::get_sample_id()
-{
-    return this->sample_id;
-}
+size_t Sample::get_sample_id() { return this->sample_id; }
 
-string Sample::get_sample_name()
-{
-    return this->sample_name;
-}
+string Sample::get_sample_name() { return this->sample_name; }
 
-vector<float> Sample::get_features()
-{
-    return this->features;
-}
+vector<float> Sample::get_features() { return this->features; }
 
-size_t Sample::get_cluster_id()
-{
-    return this->cluster_id;
-}
-float Sample::get_distance_to_centroid()
-{
-    return this->distance_to_centroid;
-}
+size_t Sample::get_cluster_id() { return this->cluster_id; }
+float Sample::get_distance_to_centroid() { return this->distance_to_centroid; }
 
-void Sample::reset_sample()
-{
+void Sample::reset_sample() {
     this->cluster_id = std::numeric_limits<unsigned>::quiet_NaN();
     this->distance_to_centroid = std::numeric_limits<float>::quiet_NaN();
 }
@@ -69,60 +51,40 @@ void Sample::reset_sample()
 /*****************
  * class Cluster *
  *****************/
-Cluster::Cluster(size_t cluster_id)
-{
+Cluster::Cluster(size_t cluster_id) {
     this->cluster_id = cluster_id;
     this->cluster_size = 0;
 }
 
-void Cluster::add_sample(Sample &s)
-{
+void Cluster::add_sample(Sample &s) {
     s.set_cluster_id(this->cluster_id);
-    if (this->centroid.size() == 0)
-    {
+    if (this->centroid.size() == 0) {
         this->centroid = s.get_features();
     }
     s.set_distance_to_centroid(this->centroid);
     this->samples.push_back(s);
     this->cluster_size++;
 }
-void Cluster::remove_sample(Sample &s)
-{
-    for (size_t i = 0; i <= samples.size(); i++)
-    {
-        if (samples[i].get_sample_id() == s.get_sample_id())
-        {
+void Cluster::remove_sample(Sample &s) {
+    for (size_t i = 0; i <= samples.size(); i++) {
+        if (samples[i].get_sample_id() == s.get_sample_id()) {
             s.reset_sample();
             samples.erase(samples.begin() + i);
             this->cluster_size--;
         }
     }
 }
-size_t Cluster::get_cluster_id()
-{
-    return this->cluster_id;
-}
-vector<float> Cluster::get_centroid()
-{
-    return this->centroid;
-}
+size_t Cluster::get_cluster_id() { return this->cluster_id; }
+vector<float> Cluster::get_centroid() { return this->centroid; }
 
-vector<Sample> Cluster::get_samples()
-{
-    return this->samples;
-}
+vector<Sample> Cluster::get_samples() { return this->samples; }
 
-size_t Cluster::get_cluster_size()
-{
-    return this->samples.size();
-}
+size_t Cluster::get_cluster_size() { return this->samples.size(); }
 
-void Cluster::update_centroid()
-{
+void Cluster::update_centroid() {
     const size_t NCOL = this->centroid.size();
     // centroid.resize(NCOL);
-    for (size_t j = 0; j < NCOL; j++)
-    {
+    for (size_t j = 0; j < NCOL; j++) {
         centroid[j] = kmeans::col_mean(samples, j);
     }
 }
@@ -130,41 +92,34 @@ void Cluster::update_centroid()
 /********************
  * helper functions *
  ********************/
-namespace kmeans
-{
-vector<string>
-split(const string &line, vector<string> &v, const char delimiter = '\t')
-{
-    // Split a string and store into a vector of strings, removing the given delimiter.
+namespace kmeans {
+vector<string> split(const string &line, vector<string> &v,
+                     const char delimiter = '\t') {
+    // Split a string and store into a vector of strings, removing the given
+    // delimiter.
     std::istringstream iss(line);
     string token;
-    while (getline(iss, token, delimiter))
-    {
+    while (getline(iss, token, delimiter)) {
         v.push_back(token);
     }
     return v;
 }
 
-vector<vector<string>>
-read_table(vector<vector<string>> &matrix, const string input_file)
-{
+vector<vector<string>> read_table(vector<vector<string>> &matrix,
+                                  const string input_file) {
     // Read a file into a vector of vectors (representing a matrix).
     std::ifstream fin(input_file);
 
-    if (fin.is_open())
-    {
+    if (fin.is_open()) {
         string line;
-        while (getline(fin, line))
-        {
+        while (getline(fin, line)) {
             vector<string> row;
             row = split(line, row);
             matrix.push_back(row);
         }
         matrix.shrink_to_fit();
         fin.close();
-    }
-    else
-    {
+    } else {
         printf("Cannot open file: %s\n", input_file.c_str());
         exit(1);
     }
@@ -172,95 +127,81 @@ read_table(vector<vector<string>> &matrix, const string input_file)
     return matrix;
 }
 
-float col_mean(vector<Sample> &v, size_t ncol)
-{
+float col_mean(vector<Sample> &v, size_t ncol) {
     float feature_mean = 0.0;
-    for (auto &item : v)
-    {
+    for (auto &item : v) {
         feature_mean += item.get_features()[ncol];
     }
     feature_mean /= v.size();
     return feature_mean;
 }
 
-void scale_features(vector<Sample> &v)
-{
+void scale_features(vector<Sample> &v) {
     // Scale the matrix such that each column has mean 0 and sd 1.
-    const size_t NCOL = v[0].get_features().size(),
-                 NROW = v.size();
-    for (size_t j = 0; j < NCOL; j++)
-    {
+    const size_t NCOL = v[0].get_features().size(), NROW = v.size();
+    for (size_t j = 0; j < NCOL; j++) {
         float feature_mean, feature_sd = 0.0;
         // calculate mean
         feature_mean = col_mean(v, j);
         // calculate standard deviation
-        for (size_t i = 0; i < NROW; i++)
-        {
-            feature_sd += pow(v[i].get_features()[j] - feature_mean, 2.0);
+        for (size_t i = 0; i < NROW; i++) {
+            feature_sd += (v[i].get_features()[j] - feature_mean) *
+                          (v[i].get_features()[j] - feature_mean);
         }
         feature_sd = sqrt(feature_sd / NROW);
         // scale feature
-        for (size_t i = 0; i < NROW; i++)
-        {
-            v[i].get_features()[j] = (v[i].get_features()[j] - feature_mean) / feature_sd;
+        for (size_t i = 0; i < NROW; i++) {
+            v[i].set_feature(
+                j, (v[i].get_features()[j] - feature_mean) / feature_sd);
         }
     };
 }
 
-float distance(vector<float> &v1, vector<float> &v2)
-{
+float distance(vector<float> &v1, vector<float> &v2) {
     float ans = 0.0;
-    for (size_t i = 0; i < v1.size(); i++)
-    {
-        ans += pow(v1[i] - v2[i], 2);
+    for (size_t i = 0; i < v1.size(); i++) {
+        ans += (v1[i] - v2[i]) * (v1[i] - v2[i]);
     }
     return ans;
 }
 
-void initialize_clusters(vector<Cluster> &clusters, vector<Sample> &samples, size_t k)
-{
+void initialize_clusters(vector<Cluster> &clusters, vector<Sample> &samples,
+                         size_t k) {
     assert(k >= 2);
     std::random_device rn;
     std::mt19937 seed{rn()};
-    for (size_t cluster_id = 2; cluster_id <= k; cluster_id++)
-    {
+    for (size_t cluster_id = 2; cluster_id <= k; cluster_id++) {
         // calculate distances of each sample to the nearest centroid
         vector<float> distances;
-        for (auto &sample : samples)
-        {
+        for (auto &sample : samples) {
             float min_distance = std::numeric_limits<float>::quiet_NaN();
-            for (auto &cluster : clusters)
-            {
+            for (auto &cluster : clusters) {
                 vector<float> centroid = cluster.get_centroid();
                 vector<float> _features = sample.get_features();
                 float _distance = kmeans::distance(_features, centroid);
-                if (std::isnan(min_distance) || _distance < min_distance)
-                {
+                if (std::isnan(min_distance) || _distance < min_distance) {
                     min_distance = _distance;
                 }
             }
             distances.push_back(min_distance);
         }
         // used a weighted probability distribution to choose the next centroid
-        std::discrete_distribution<size_t> generator(distances.begin(), distances.end());
+        std::discrete_distribution<size_t> generator(distances.begin(),
+                                                     distances.end());
         clusters.emplace_back(cluster_id);
         clusters.back().add_sample(samples[generator(seed)]);
     }
 }
 
-Sample furthest_sample_in_clusters(vector<Cluster> &v)
-{
+Sample furthest_sample_in_clusters(vector<Cluster> &v) {
     Sample furthest_sample;
-    for (auto &c : v)
-    {
-        if (c.get_cluster_size() != 0)
-        {
+    for (auto &c : v) {
+        if (c.get_cluster_size() != 0) {
             vector<Sample> ss = c.get_samples();
-            for (auto &s : ss)
-            {
+            for (auto &s : ss) {
                 if (std::isnan(furthest_sample.get_distance_to_centroid()) ||
-                    s.get_distance_to_centroid() > furthest_sample.get_distance_to_centroid())
-                {
+                    s.get_distance_to_centroid() >
+                        furthest_sample.get_distance_to_centroid()) {
                     furthest_sample = s;
                 }
             }
@@ -268,4 +209,4 @@ Sample furthest_sample_in_clusters(vector<Cluster> &v)
     }
     return furthest_sample;
 }
-} // namespace kmeans
+}  // namespace kmeans

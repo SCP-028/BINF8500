@@ -26,9 +26,9 @@ private:
   size_t m_motif_len;
   Matrix<float> m_score_matrix; // columns A, C, G, T
   Matrix<float> m_reverse_matrix;
+  std::vector<float> m_background_prob;
 
 public:
-  std::vector<float> m_background_prob;
   PSSM(const Svec &motifs, const std::string &DNA);
   std::vector<float> count_char_occurrence(const std::string &s);
   void print_score_matrix(const unsigned rounding);
