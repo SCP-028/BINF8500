@@ -6,14 +6,15 @@
 using namespace std;
 
 const static size_t INIT_SEED = 20, MAX_ITER = 1000;
-// chance of shifting left & right in each iteration
-const static double PROB_SHIFT = 0.20, PROB_CHANGE_LEN = 0.01;
+// chance of shifting left & right in each iteration, and the chance of changing
+// the length of the motifs
+const static double PROB_SHIFT = 0.10;
 
 int main(int argc, char **argv) {
     if (argc != 3) {
         printf(
             "[ERROR] %s requires 2 arguments, but %d were given.\n"
-            "Usage: %s <sequences.fasta> <motif-length>\n"
+            "Usage: %s <sequences.fasta> <estimated-motif-length>\n"
             "Example: %s data/E.coliRpoN-sequences-16-100nt.fasta 20\n",
             argv[0], argc - 1, argv[0], argv[0]);
         return 1;
@@ -22,7 +23,9 @@ int main(int argc, char **argv) {
     // Read fasta file into matrix of strings, where:
     //     the first column is the name, and
     //     the second column is the sequence
-    const Matrix<string> fasta = infiles::read_fasta(argv[1]);
+    const Matrix<string> fasta_str = infiles::read_fasta(argv[1]);
+    const Matrix<int> fasta = infiles::convert_nt_to_num(fasta_str);
+    const Matrix<double> bg_freqs = pssm::calc_bg_freqs(fasta);
 
     // Global parameters
     size_t motif_len = stoul(argv[2]);
@@ -46,36 +49,43 @@ int main(int argc, char **argv) {
 
         while (num_changes != 0 && iter_num <= MAX_ITER) {
             iter_num++;
-            // Update motif position in each sequence to the position with the
-            // highest score
-            num_changes = gibbs::update_position(
-                fasta, motif_len, motif_positions, fasta_scores, generator);
+            // Update motif position in each sequence to a new position with
+            // the scores as the probabilities
+            num_changes = gibbs::update_position(fasta, bg_freqs, motif_len,
+                                                 motif_positions, fasta_scores,
+                                                 generator);
             gibbs::update_final_score(fasta_scores, motif_positions, max_score,
                                       final_position);
 
             // Shift left or right with a probability
             if (shift_left_right(generator) <= PROB_SHIFT) {
                 num_changes++;
-                gibbs::shift_left(fasta, motif_len, 1, motif_positions,
-                                  fasta_scores);
+                gibbs::shift_left(fasta, bg_freqs, motif_len, 1,
+                                  motif_positions, fasta_scores);
                 gibbs::update_final_score(fasta_scores, motif_positions,
                                           max_score, final_position);
 
-                gibbs::shift_right(fasta, motif_len, 2, motif_positions,
-                                   fasta_scores);
+                gibbs::shift_right(fasta, bg_freqs, motif_len, 2,
+                                   motif_positions, fasta_scores);
                 gibbs::update_final_score(fasta_scores, motif_positions,
                                           max_score, final_position);
             }
         }
+        // After MAX_ITER iterations, perform a final scan on the entire
+        // sequence to guarantee the local maximum (a very important step)
         for (size_t i = 0; i < fasta_size; i++) {
-            gibbs::final_scan(fasta, motif_len, motif_positions, fasta_scores);
+            gibbs::final_scan(fasta, bg_freqs, motif_len, motif_positions,
+                              fasta_scores);
         }
         gibbs::update_final_score(fasta_scores, motif_positions, max_score,
                                   final_position);
+
+        // Store result of current thread
         max_scores[init_stat] = max_score;
         final_positions[init_stat] = final_position;
     }
 
+    // Find the max score in all different initial seeds
     double max_score = 0.0;
     vector<size_t> final_position;
     for (size_t i = 0; i < INIT_SEED; i++) {
@@ -97,9 +107,9 @@ int main(int argc, char **argv) {
     printf("Motif sequences and locations:\n\n");
     for (size_t i = 0; i < fasta_size; i++) {
         const size_t motif_pos = final_position[i];
-        const string motif_seq = fasta[i][1].substr(motif_pos, motif_len);
+        const string motif_seq = fasta_str[i][1].substr(motif_pos, motif_len);
         printf("%s\t%zu-%zu\t%s\n", motif_seq.c_str(), motif_pos + 1,
-               motif_pos + motif_len, fasta[i][0].c_str());
+               motif_pos + motif_len, fasta_str[i][0].c_str());
     }
     printf("\n\n");
     return 0;
