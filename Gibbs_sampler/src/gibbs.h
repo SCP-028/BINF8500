@@ -123,8 +123,7 @@ inline void convert_to_pssm(const vector<double> &bg_freq,
             total_freq += ele;
         }
         for (int i = 0; i < 4; i++) {
-            row[i] = log(row[i] / (total_freq * bg_freq[i]));
-            row[i] = (row[i] < 0) ? 0 : row[i];
+            row[i] = log2(row[i] / (total_freq * bg_freq[i]));
         }
     }
 }
@@ -170,7 +169,7 @@ inline vector<size_t> init_motif_positions(const Matrix<int> &fasta,
 }
 inline vector<double> calc_scores_in_seq(const Matrix<int> &fasta,
                                          const size_t seq_i,
-                                         const double motif_len,
+                                         const size_t motif_len,
                                          const Matrix<double> &score_matrix) {
     const size_t motif_num = fasta[seq_i].size() - motif_len;
     vector<double> motif_scores(motif_num, 0.0);
@@ -196,13 +195,14 @@ inline size_t update_position(const Matrix<int> &fasta,
         // Use PSSM to assign score to each position in seq 1
         vector<double> motif_scores =
             gibbs::calc_scores_in_seq(fasta, i, motif_len, score_matrix);
-        size_t new_pos = 0;
-
+        for (auto &ele : motif_scores) {
+            ele = (ele < 0) ? 0 : ele;
+        }
         // Select new location in seq 1 with probability proportional
         // to the previous scores using a weighted probability distribution
         std::discrete_distribution<size_t> dist(motif_scores.begin(),
                                                 motif_scores.end());
-        new_pos = dist(generator);
+        size_t new_pos = dist(generator);
         if (new_pos != motif_positions[i]) {
             num_changes++;
             motif_positions[i] = new_pos;
@@ -225,15 +225,16 @@ inline void update_final_score(const vector<double> &fasta_scores,
         final_positions = motif_positions;
     }
 }
-inline void shift_left(const Matrix<int> &fasta, const Matrix<double> &bg_freqs,
-                       const size_t motif_len, const size_t step,
-                       vector<size_t> &motif_positions,
-                       vector<double> &fasta_scores) {
-    // Shift left one nt if not already at position 0
+inline void shift_left_right(const Matrix<int> &fasta,
+                             const Matrix<double> &bg_freqs,
+                             const size_t motif_len,
+                             vector<size_t> &motif_positions,
+                             vector<double> &fasta_scores) {
     const size_t seq_num = fasta.size();
     for (size_t i = 0; i < seq_num; i++) {
-        if (motif_positions[i] >= step) {
-            motif_positions[i] -= step;
+        // Shift left 1nt if not already at position 0
+        if (motif_positions[i] > 0) {
+            motif_positions[i]--;
         }
         Matrix<double> score_matrix =
             pssm::build_pssm(fasta, bg_freqs, motif_len, i, motif_positions);
@@ -242,30 +243,182 @@ inline void shift_left(const Matrix<int> &fasta, const Matrix<double> &bg_freqs,
         if (new_score > fasta_scores[i]) {
             fasta_scores[i] = new_score;
         } else {
-            motif_positions[i] += step;
+            motif_positions[i]++;
         }
-    }
-}
-inline void shift_right(const Matrix<int> &fasta,
-                        const Matrix<double> &bg_freqs, const size_t motif_len,
-                        const size_t step, vector<size_t> &motif_positions,
-                        vector<double> &fasta_scores) {
-    const size_t seq_num = fasta.size();
-    for (size_t i = 0; i < seq_num; i++) {
-        if (motif_positions[i] + motif_len + step <= fasta[i].size()) {
-            motif_positions[i] += step;
+        // Check right boundary
+        if (motif_positions[i] + motif_len + 2 <= fasta[i].size()) {
+            motif_positions[i]++;
         }
-        Matrix<double> score_matrix =
+        score_matrix =
             pssm::build_pssm(fasta, bg_freqs, motif_len, i, motif_positions);
-        double new_score = pssm::calc_score(score_matrix, fasta[i],
-                                            motif_positions[i], motif_len);
+        new_score = pssm::calc_score(score_matrix, fasta[i], motif_positions[i],
+                                     motif_len);
         if (new_score > fasta_scores[i]) {
             fasta_scores[i] = new_score;
         } else {
-            motif_positions[i] -= step;
+            motif_positions[i]--;
         }
     }
 }
+inline void end_left_right(const Matrix<int> &fasta,
+                           const Matrix<double> &bg_freqs, size_t &motif_len,
+                           vector<size_t> &motif_positions,
+                           vector<double> &fasta_scores) {
+    size_t tmp_motif_len = motif_len, max_motif_len = motif_len;
+    vector<size_t> tmp_motif_pos = motif_positions,
+                   max_motif_pos = motif_positions;
+    double tmp_score = 0.0, max_score = 0.0;
+    const size_t seq_num = fasta.size();
+    vector<double> tmp_scores(seq_num, 0.0), max_scores = fasta_scores;
+    for (size_t i = 0; i < seq_num; i++) {
+        max_score += fasta_scores[i];  // first max score is the initial score
+    }
+    // Right cut 1nt
+    if (tmp_motif_len > 1) {
+        tmp_motif_len--;
+        for (size_t i = 0; i < seq_num; i++) {
+            Matrix<double> score_matrix = pssm::build_pssm(
+                fasta, bg_freqs, tmp_motif_len, i, tmp_motif_pos);
+            tmp_scores[i] = pssm::calc_score(score_matrix, fasta[i],
+                                             tmp_motif_pos[i], tmp_motif_len);
+            tmp_score += tmp_scores[i];
+        }
+        if (tmp_score > max_score) {
+            max_score = tmp_score;
+            max_scores = tmp_scores;
+            max_motif_pos = tmp_motif_pos;
+            max_motif_len = tmp_motif_len;
+        }
+        tmp_motif_len++;
+    }
+
+    // Left cut 1nt
+    tmp_score = 0.0;
+    if (tmp_motif_len > 1) {
+        tmp_motif_len--;
+        for (size_t i = 0; i < seq_num; i++) {
+            tmp_motif_pos[i]++;
+            Matrix<double> score_matrix = pssm::build_pssm(
+                fasta, bg_freqs, tmp_motif_len, i, tmp_motif_pos);
+            tmp_scores[i] = pssm::calc_score(score_matrix, fasta[i],
+                                             tmp_motif_pos[i], tmp_motif_len);
+            tmp_score += tmp_scores[i];
+        }
+        if (max_score < tmp_score) {
+            max_score = tmp_score;
+            max_scores = tmp_scores;
+            max_motif_pos = tmp_motif_pos;
+            max_motif_len = tmp_motif_len;
+        }
+        tmp_motif_len++;
+        tmp_motif_pos = motif_positions;
+    }
+
+    // Cut 1nt on both ends
+    tmp_score = 0.0;
+    if (tmp_motif_len > 2) {
+        tmp_motif_len -= 2;
+        for (size_t i = 0; i < seq_num; i++) {
+            tmp_motif_pos[i]++;
+            Matrix<double> score_matrix = pssm::build_pssm(
+                fasta, bg_freqs, tmp_motif_len, i, tmp_motif_pos);
+            tmp_scores[i] = pssm::calc_score(score_matrix, fasta[i],
+                                             tmp_motif_pos[i], tmp_motif_len);
+            tmp_score += tmp_scores[i];
+        }
+        if (max_score < tmp_score) {
+            max_score = tmp_score;
+            max_scores = tmp_scores;
+            max_motif_pos = tmp_motif_pos;
+            max_motif_len = tmp_motif_len;
+        }
+        tmp_motif_len += 2;
+        tmp_motif_pos = motif_positions;
+    }
+
+    // Extend 1nt on the left
+    bool at_left_end = false;
+    for (size_t i = 0; i < seq_num; i++) {
+        // Check left boundary
+        if (tmp_motif_pos[i] == 0) {
+            at_left_end = true;
+        }
+    }
+    if (at_left_end != true) {
+        tmp_motif_len++;
+        for (size_t i = 0; i < seq_num; i++) {
+            tmp_motif_pos[i]--;
+            Matrix<double> score_matrix = pssm::build_pssm(
+                fasta, bg_freqs, tmp_motif_len, i, tmp_motif_pos);
+            tmp_scores[i] = pssm::calc_score(score_matrix, fasta[i],
+                                             tmp_motif_pos[i], tmp_motif_len);
+            tmp_score += tmp_scores[i];
+        }
+        if (max_score < tmp_score) {
+            max_score = tmp_score;
+            max_scores = tmp_scores;
+            max_motif_pos = tmp_motif_pos;
+            max_motif_len = tmp_motif_len;
+        }
+        tmp_motif_len--;
+        tmp_motif_pos = motif_positions;
+    } else {
+        at_left_end = true;
+    }
+
+    // Extend 1nt on the right
+    bool at_right_end = false;
+    for (size_t i = 0; i < seq_num; i++) {
+        // Check left boundary
+        if (tmp_motif_pos[i] + tmp_motif_len + 2 > fasta[i].size()) {
+            at_right_end = true;
+        }
+    }
+    if (at_right_end != true) {
+        tmp_motif_len++;
+        for (size_t i = 0; i < seq_num; i++) {
+            Matrix<double> score_matrix = pssm::build_pssm(
+                fasta, bg_freqs, tmp_motif_len, i, tmp_motif_pos);
+            tmp_scores[i] = pssm::calc_score(score_matrix, fasta[i],
+                                             tmp_motif_pos[i], tmp_motif_len);
+            tmp_score += tmp_scores[i];
+        }
+        if (max_score < tmp_score) {
+            max_score = tmp_score;
+            max_scores = tmp_scores;
+            max_motif_pos = tmp_motif_pos;
+            max_motif_len = tmp_motif_len;
+        }
+        tmp_motif_len--;
+    } else {
+        at_right_end = true;
+    }
+
+    // Extend 1nt on both ends
+    if (at_left_end != true && at_right_end != true) {
+        tmp_motif_len++;
+        for (size_t i = 0; i < seq_num; i++) {
+            tmp_motif_pos[i]--;
+            Matrix<double> score_matrix = pssm::build_pssm(
+                fasta, bg_freqs, tmp_motif_len, i, tmp_motif_pos);
+            tmp_scores[i] = pssm::calc_score(score_matrix, fasta[i],
+                                             tmp_motif_pos[i], tmp_motif_len);
+            tmp_score += tmp_scores[i];
+        }
+        if (max_score < tmp_score) {
+            max_score = tmp_score;
+            max_scores = tmp_scores;
+            max_motif_pos = tmp_motif_pos;
+            max_motif_len = tmp_motif_len;
+        }
+        tmp_motif_len--;
+        tmp_motif_pos = motif_positions;
+    }
+    motif_len = max_motif_len;
+    motif_positions = max_motif_pos;
+    fasta_scores = max_scores;
+}
+
 inline void final_scan(const Matrix<int> &fasta, const Matrix<double> &bg_freqs,
                        const size_t motif_len, vector<size_t> &motif_positions,
                        vector<double> &fasta_scores) {

@@ -5,10 +5,9 @@
 #include "gibbs.h"
 using namespace std;
 
-const static size_t INIT_SEED = 20, MAX_ITER = 1000;
-// chance of shifting left & right in each iteration, and the chance of changing
-// the length of the motifs
-const static double PROB_SHIFT = 0.10;
+const static size_t INIT_SEED = 300, MAX_ITER = 2000;
+// chance of: extending and shortening on the left side & on the right side
+const static double PROB_SHIFT = 0.10, PROB_MOD_LEN = 0.20;
 
 int main(int argc, char **argv) {
     if (argc != 3) {
@@ -28,14 +27,21 @@ int main(int argc, char **argv) {
     const Matrix<double> bg_freqs = pssm::calc_bg_freqs(fasta);
 
     // Global parameters
-    size_t motif_len = stoul(argv[2]);
     uniform_real_distribution<double> shift_left_right(0, 1);
 
     const size_t fasta_size = fasta.size();
+    vector<size_t> final_len(INIT_SEED);
     vector<float> max_scores(INIT_SEED);
     Matrix<size_t> final_positions(INIT_SEED);
 #pragma omp parallel for
     for (size_t init_stat = 0; init_stat < INIT_SEED; init_stat++) {
+        // TODO: should you always start from the guess, or change the initial
+        // point through the interations?
+        size_t motif_len = stoul(argv[2]);
+        // If the guess is unreasonable, take its half as the starting point
+        if (motif_len * 2 > fasta[0].size()) {
+            motif_len /= 2;
+        }
         double max_score = 0.0;
         vector<double> fasta_scores(fasta_size, 0.0);
         vector<size_t> final_position;
@@ -60,15 +66,16 @@ int main(int argc, char **argv) {
             // Shift left or right with a probability
             if (shift_left_right(generator) <= PROB_SHIFT) {
                 num_changes++;
-                gibbs::shift_left(fasta, bg_freqs, motif_len, 1,
-                                  motif_positions, fasta_scores);
+                gibbs::shift_left_right(fasta, bg_freqs, motif_len,
+                                        motif_positions, fasta_scores);
                 gibbs::update_final_score(fasta_scores, motif_positions,
                                           max_score, final_position);
-
-                gibbs::shift_right(fasta, bg_freqs, motif_len, 2,
-                                   motif_positions, fasta_scores);
-                gibbs::update_final_score(fasta_scores, motif_positions,
-                                          max_score, final_position);
+                if (shift_left_right(generator) <= PROB_MOD_LEN) {
+                    gibbs::end_left_right(fasta, bg_freqs, motif_len,
+                                          motif_positions, fasta_scores);
+                    gibbs::update_final_score(fasta_scores, motif_positions,
+                                              max_score, final_position);
+                }
             }
         }
         // After MAX_ITER iterations, perform a final scan on the entire
@@ -83,15 +90,18 @@ int main(int argc, char **argv) {
         // Store result of current thread
         max_scores[init_stat] = max_score;
         final_positions[init_stat] = final_position;
+        final_len[init_stat] = motif_len;
     }
 
     // Find the max score in all different initial seeds
     double max_score = 0.0;
     vector<size_t> final_position;
+    size_t motif_len;
     for (size_t i = 0; i < INIT_SEED; i++) {
         if (max_scores[i] > max_score) {
             max_score = max_scores[i];
             final_position = final_positions[i];
+            motif_len = final_len[i];
         }
     }
 
