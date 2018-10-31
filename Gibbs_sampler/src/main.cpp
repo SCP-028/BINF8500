@@ -7,7 +7,7 @@ using namespace std;
 
 const static size_t INIT_SEED = 300, MAX_ITER = 2000;
 // chance of: extending and shortening on the left side & on the right side
-const static double PROB_SHIFT = 0.10, PROB_MOD_LEN = 0.20;
+const static double PROB_SHIFT = 0.05, PROB_MOD_LEN = 0.10;
 
 int main(int argc, char **argv) {
     if (argc != 3) {
@@ -63,23 +63,28 @@ int main(int argc, char **argv) {
             gibbs::update_final_score(fasta_scores, motif_positions, max_score,
                                       final_position);
 
-            // Shift left or right with a probability
+            // Shift each sequence left and right individually
             if (shift_left_right(generator) <= PROB_SHIFT) {
                 num_changes++;
                 gibbs::shift_left_right(fasta, bg_freqs, motif_len,
                                         motif_positions, fasta_scores);
                 gibbs::update_final_score(fasta_scores, motif_positions,
                                           max_score, final_position);
-                if (shift_left_right(generator) <= PROB_MOD_LEN) {
-                    gibbs::end_left_right(fasta, bg_freqs, motif_len,
-                                          motif_positions, fasta_scores);
-                    gibbs::update_final_score(fasta_scores, motif_positions,
-                                              max_score, final_position);
-                }
+            }
+            // Shift all sequences
+            if (shift_left_right(generator) <= PROB_MOD_LEN) {
+                gibbs::end_left_right(fasta, bg_freqs, motif_len,
+                                      motif_positions, fasta_scores);
+                gibbs::update_final_score(fasta_scores, motif_positions,
+                                          max_score, final_position);
             }
         }
         // After MAX_ITER iterations, perform a final scan on the entire
         // sequence to guarantee the local maximum (a very important step)
+        gibbs::end_left_right(fasta, bg_freqs, motif_len, motif_positions,
+                              fasta_scores);
+        gibbs::update_final_score(fasta_scores, motif_positions, max_score,
+                                  final_position);
         for (size_t i = 0; i < fasta_size; i++) {
             gibbs::final_scan(fasta, bg_freqs, motif_len, motif_positions,
                               fasta_scores);
