@@ -171,7 +171,7 @@ inline vector<double> calc_scores_in_seq(const Matrix<int> &fasta,
                                          const size_t seq_i,
                                          const size_t motif_len,
                                          const Matrix<double> &score_matrix) {
-    const size_t motif_num = fasta[seq_i].size() - motif_len;
+    const size_t motif_num = fasta[seq_i].size() - motif_len - 1;
     vector<double> motif_scores(motif_num, 0.0);
     for (size_t _pos = 0; _pos < motif_num; _pos++) {
         motif_scores[_pos] =
