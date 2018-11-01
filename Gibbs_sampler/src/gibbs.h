@@ -179,13 +179,11 @@ inline vector<double> calc_scores_in_seq(const Matrix<int> &fasta,
     }
     return motif_scores;
 }
-inline size_t update_position(const Matrix<int> &fasta,
-                              const Matrix<double> &bg_freqs,
-                              const size_t motif_len,
-                              vector<size_t> &motif_positions,
-                              vector<double> &fasta_scores,
-                              mt19937 &generator) {
-    size_t num_changes = 0;
+inline void update_position(const Matrix<int> &fasta,
+                            const Matrix<double> &bg_freqs,
+                            const size_t motif_len,
+                            vector<size_t> &motif_positions,
+                            vector<double> &fasta_scores, mt19937 &generator) {
     const size_t seq_num = fasta.size();
     for (size_t i = 0; i < seq_num; i++) {
         // Use all words except seq[i] to build the PSSM
@@ -204,26 +202,27 @@ inline size_t update_position(const Matrix<int> &fasta,
                                                 motif_scores.end());
         size_t new_pos = dist(generator);
         if (new_pos != motif_positions[i]) {
-            num_changes++;
             motif_positions[i] = new_pos;
             fasta_scores[i] =
                 pssm::calc_score(score_matrix, fasta[i], new_pos, motif_len);
         }
     }
-    return num_changes;
 }
-inline void update_final_score(const vector<double> &fasta_scores,
+inline bool update_final_score(const vector<double> &fasta_scores,
                                const vector<size_t> &motif_positions,
                                double &max_score,
                                vector<size_t> &final_positions) {
     double total_score = 0.0;
+    bool score_changed = false;
     for (auto &ele : fasta_scores) {
         total_score += ele;
     }
     if (total_score > max_score) {
+        score_changed = true;
         max_score = total_score;
         final_positions = motif_positions;
     }
+    return score_changed;
 }
 inline void shift_left_right(const Matrix<int> &fasta,
                              const Matrix<double> &bg_freqs,
