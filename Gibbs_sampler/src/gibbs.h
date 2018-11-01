@@ -123,7 +123,7 @@ inline void convert_to_pssm(const vector<double> &bg_freq,
             total_freq += ele;
         }
         for (int i = 0; i < 4; i++) {
-            row[i] = log2(row[i] / (total_freq * bg_freq[i]));
+            row[i] = log2(row[i] / total_freq / bg_freq[i]);
         }
     }
 }
