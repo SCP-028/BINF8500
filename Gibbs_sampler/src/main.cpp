@@ -85,17 +85,19 @@ int main(int argc, char **argv) {
         } while (plateau_iter < PLATEAU_CYCLES && iter_num < MAX_ITER);
         // After MAX_ITER iterations, perform a final scan on the entire
         // sequence to guarantee the local maximum (a very important step)
-        gibbs::end_left_right(fasta, bg_freqs, motif_len, motif_positions,
-                              fasta_scores);
-        gibbs::update_final_score(fasta_scores, motif_positions, max_score,
-                                  final_position);
         for (size_t i = 0; i < fasta_size; i++) {
             gibbs::final_scan(fasta, bg_freqs, motif_len, motif_positions,
                               fasta_scores);
         }
         gibbs::update_final_score(fasta_scores, motif_positions, max_score,
                                   final_position);
-
+        // afterwards, check if shifting left / right would improve the score
+        do {
+            gibbs::end_left_right(fasta, bg_freqs, motif_len, motif_positions,
+                                  fasta_scores);
+            score_changed = gibbs::update_final_score(
+                fasta_scores, motif_positions, max_score, final_position);
+        } while (score_changed == true);
         // Store result of current seed
         max_scores[init_stat] = max_score;
         final_positions[init_stat] = final_position;
