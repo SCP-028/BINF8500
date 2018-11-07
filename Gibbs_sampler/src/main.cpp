@@ -64,14 +64,15 @@ int main(int argc, char **argv) {
                 fasta_scores, motif_positions, max_score, final_position);
 
             // Shift each sequence left and right individually
-            if (shift_left_right(generator) <= PROB_SHIFT) {
+            double random_num = shift_left_right(generator);
+            if (random_num <= PROB_SHIFT) {
                 gibbs::shift_left_right(fasta, bg_freqs, motif_len,
                                         motif_positions, fasta_scores);
                 score_changed = gibbs::update_final_score(
                     fasta_scores, motif_positions, max_score, final_position);
             }
             // Shift all sequences
-            if (shift_left_right(generator) <= PROB_MOD_LEN) {
+            if (random_num <= PROB_MOD_LEN) {
                 gibbs::end_left_right(fasta, bg_freqs, motif_len,
                                       motif_positions, fasta_scores);
                 score_changed = gibbs::update_final_score(
